@@ -121,6 +121,31 @@ body.playing #screenGame.card{
 .lvl-btn .stars{font-size:13px}
 .lvl-btn .meta-mini{font-size:10px; color:var(--muted)}
 
+/* Resume sous chaque niveau : champion + meilleur du joueur */
+.sum{display:flex; flex-wrap:wrap; gap:4px 10px; margin-top:5px; font-size:11px}
+.sum-top{color:var(--gold)}
+.sum-top b, .sum-me b{font-family:'Bangers',cursive; font-size:14px; letter-spacing:1px}
+.sum-me{color:var(--green-l)}
+.sum-me.none{color:var(--muted); opacity:.8}
+.sum.empty, .sum-empty{color:var(--muted); font-size:11px; opacity:.85}
+
+/* Entete du classement */
+.summary-box{display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:12px}
+.sum-card{background:rgba(255,255,255,0.05); border:1px solid rgba(168,85,247,0.28);
+  border-radius:13px; padding:10px 8px; text-align:center; display:flex; flex-direction:column; gap:1px}
+.sum-card.top{border-color:rgba(255,215,0,0.55); background:linear-gradient(145deg,rgba(255,215,0,0.14),rgba(217,119,6,0.10))}
+.sum-card.me{border-color:rgba(34,197,94,0.5); background:linear-gradient(145deg,rgba(22,163,74,0.20),rgba(21,128,61,0.14))}
+.sum-card.me.none{border-color:rgba(168,85,247,0.28); background:rgba(255,255,255,0.04)}
+.sum-card .cap{font-size:9px; color:var(--muted); letter-spacing:.5px}
+.sum-card b{font-family:'Bangers',cursive; font-size:20px; letter-spacing:1px;
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+.sum-card.top b{color:var(--gold)}
+.sum-card.me b{color:var(--green-l)}
+.sum-card .pt{font-size:11px}
+.sum-card .ms{font-size:9px; color:var(--muted)}
+.sum-players{grid-column:1/-1; text-align:center; font-size:10px; color:var(--muted)}
+.sum-empty{grid-column:1/-1; text-align:center; padding:6px}
+
 /* ===== Scores ===== */
 .scores-box{margin-top:6px; background:rgba(255,255,255,0.04); border:1px solid rgba(168,85,247,0.25); border-radius:14px; padding:14px}
 .scores-box .sh{font-family:'Bangers',cursive; letter-spacing:1px; color:var(--gold); font-size:16px; margin-bottom:10px; text-align:center}
@@ -267,6 +292,7 @@ body.playing #screenGame.card{
     <div class="sec-title" id="boardTitle">CLASSEMENT</div>
     <div class="sec-sub" id="boardSub">Remis a zero chaque jour</div>
     <div class="tabs" id="boardTabs"></div>
+    <div class="summary-box" id="boardSummary"></div>
     <div class="scores-box">
       <div class="sh" id="lblTop">&#127941; TOP 10</div>
       <div id="board"></div>
@@ -379,10 +405,12 @@ const LEVELS = [
    ===================================================================== */
 const I18N = {
   fr:{
-    free:'JEU LIBRE', boardBtn:'CLASSEMENT DU JOUR', wallet:'CONNECT WALLET',
+    free:'JEU LIBRE', boardBtn:'CLASSEMENT GENERAL', wallet:'CONNECT WALLET',
     freeTitle:'JEU LIBRE', freeSub:'Choisis ta difficulte',
-    boardTitle:'CLASSEMENT', boardSub:'Remis a zero chaque jour (minuit, Paris)',
+    boardTitle:'CLASSEMENT GENERAL', boardSub:'Un classement par niveau, depuis le debut',
     top:'🏆 TOP 10', retour:'Retour', menu:'Menu',
+    you:'Toi', notPlayed:'Pas encore joue', champion:'Champion',
+    yourBest:'Ton meilleur', ptsShort:'pts', playersTotal:'joueur(s) classe(s)',
     lvl:['Facile','Moyen','Difficile'],
     lvlMeta:['Ouvert a tous','Reserve aux hodlers $FRANC','Reserve aux hodlers $FRANC'],
     score:'SCORE', time:'TEMPS', ms:'REACTION',
@@ -392,20 +420,22 @@ const I18N = {
     over:'PARTIE TERMINEE', rank:'RANG', hits:'TOUCHES', missCnt:'RATES',
     best:'MEILLEUR', avg:'MOYENNE', pts:'POINTS',
     sending:'Envoi du score...', sendFail:'Score non enregistre',
-    bestToday:'Meilleur du jour', players:'joueur(s) aujourd\'hui',
+    bestToday:'Ton record', players:'joueur(s) classe(s)',
     replay:'Rejouer', backMenu:'Retour au menu',
     lockedLvl:'Ce niveau est reserve aux detenteurs de <b>$FRANC</b>.<br>Connecte ton wallet pour le debloquer !',
     lockedTitle:'NIVEAU VERROUILLE', connect:'Connecter mon wallet', later:'Plus tard',
     wConnected:'Connecte', wNoFranc:'Wallet connecte, pas de $FRANC', wNotConnected:'Non connecte',
-    nick:'Ton pseudo', noScores:'Personne n\'a encore joue aujourd\'hui. A toi !',
+    nick:'Ton pseudo', noScores:'Aucun score. Sois le premier !',
     loading:'Chargement...', boardFail:'Classement indisponible',
     share:'📣 Partager', legendNo:'NE PAS TAPER',
   },
   en:{
-    free:'FREE PLAY', boardBtn:'DAILY LEADERBOARD', wallet:'CONNECT WALLET',
+    free:'FREE PLAY', boardBtn:'ALL-TIME LEADERBOARD', wallet:'CONNECT WALLET',
     freeTitle:'FREE PLAY', freeSub:'Choose your difficulty',
-    boardTitle:'LEADERBOARD', boardSub:'Resets every day (midnight, Paris)',
+    boardTitle:'ALL-TIME LEADERBOARD', boardSub:'One leaderboard per level, since day one',
     top:'🏆 TOP 10', retour:'Back', menu:'Menu',
+    you:'You', notPlayed:'Not played yet', champion:'Champion',
+    yourBest:'Your best', ptsShort:'pts', playersTotal:'ranked player(s)',
     lvl:['Easy','Medium','Hard'],
     lvlMeta:['Open to everyone','$FRANC hodlers only','$FRANC hodlers only'],
     score:'SCORE', time:'TIME', ms:'REACTION',
@@ -415,12 +445,12 @@ const I18N = {
     over:'GAME OVER', rank:'RANK', hits:'HITS', missCnt:'MISSES',
     best:'BEST', avg:'AVERAGE', pts:'POINTS',
     sending:'Sending score...', sendFail:'Score not saved',
-    bestToday:'Best today', players:'player(s) today',
+    bestToday:'Your record', players:'ranked player(s)',
     replay:'Replay', backMenu:'Back to menu',
     lockedLvl:'This level is reserved for <b>$FRANC</b> holders.<br>Connect your wallet to unlock!',
     lockedTitle:'LEVEL LOCKED', connect:'Connect my wallet', later:'Later',
     wConnected:'Connected', wNoFranc:'Wallet linked, no $FRANC', wNotConnected:'Not connected',
-    nick:'Your nickname', noScores:'Nobody played today yet. Go !',
+    nick:'Your nickname', noScores:'No score yet. Be the first !',
     loading:'Loading...', boardFail:'Leaderboard unavailable',
     share:'📣 Share', legendNo:'DON\'T TAP',
   },
@@ -512,6 +542,25 @@ const submitScore = (stats,mode) => rpc('submit_reflex_score',{
   p_avg_ms:stats.avgMs, p_mode:mode
 });
 const fetchBoard = (mode) => rpc('reflex_leaderboard',{p_mode:mode, p_limit:10, p_player_id:player.id});
+const fetchSummary = (mode) => rpc('reflex_summary',{p_mode:mode, p_player_id:player.id});
+
+/* Resume d'un niveau : le champion en medaille or, puis le meilleur du joueur
+   et son rang. Alimente la ligne sous chaque mode et l'entete du classement. */
+const SUMMARIES = {}; // mode -> resume, garde en memoire entre deux rendus
+function summaryLine(s){
+  if(!s || !s.top) return `<span class="sum empty">${t('noScores')}</span>`;
+  const top = `<span class="sum-top">🥇 ${esc(s.top.name)} <b>${s.top.score}</b></span>`;
+  const me  = s.me
+    ? `<span class="sum-me">${t('you')} <b>#${s.me.rank}</b> — ${s.me.score}</span>`
+    : `<span class="sum-me none">${t('notPlayed')}</span>`;
+  return `<span class="sum">${top}${me}</span>`;
+}
+async function loadSummaries(){
+  await Promise.all(LEVELS.map(async lv=>{
+    try{ SUMMARIES[lv.id]=await fetchSummary(lv.id); }catch(e){ SUMMARIES[lv.id]=null; }
+  }));
+  renderLevelList();
+}
 
 /* =====================================================================
    ECRANS
@@ -552,7 +601,8 @@ function renderLevelList(){
     const btn=document.createElement('button');
     btn.className='lvl-btn '+(unlocked?'unlocked':'lockedb');
     btn.innerHTML=`<span class="ll"><span><span class="stars">${lv.stars}</span> ${t('lvl')[i]}</span>
-        <span class="meta-mini">${t('lvlMeta')[i]} · ${(lv.window/1000).toFixed(2)}s</span></span>
+        <span class="meta-mini">${t('lvlMeta')[i]} · ${(lv.window/1000).toFixed(2)}s</span>
+        ${summaryLine(SUMMARIES[lv.id])}</span>
       <span class="lk">${unlocked?LOCK_OPEN:LOCK_CLOSED}</span>`;
     btn.onclick=()=>{ if(!unlocked){ showLockModal(); return; } startGame(i); };
     list.appendChild(btn);
@@ -793,6 +843,7 @@ async function finish(){
     document.getElementById('subState').innerHTML=
       `${t('bestToday')} : <b style="color:var(--green-l)">${r.best}</b> · ${r.players} ${t('players')}`;
     addShareButton(r, stats);
+    loadSummaries(); // le classement general a bouge, on rafraichit les 3 lignes
   }catch(e){
     document.getElementById('rankVal').textContent='—';
     document.getElementById('subState').textContent=t('sendFail');
@@ -819,8 +870,15 @@ function openBoard(){ renderTabs(); show('screenBoard'); loadBoard(); }
 
 async function loadBoard(){
   localStorage.setItem('flcr_boardMode', boardMode);
-  const list=document.getElementById('board'), st=document.getElementById('boardState');
+  const list=document.getElementById('board'), st=document.getElementById('boardState'),
+        sum=document.getElementById('boardSummary');
   list.innerHTML=''; st.textContent=t('loading');
+
+  // L'entete (champion + rang du joueur) se charge en parallele du TOP 10.
+  fetchSummary(boardMode)
+    .then(s=>{ SUMMARIES[boardMode]=s; sum.innerHTML=boardSummaryHtml(s); })
+    .catch(()=>{ sum.innerHTML=''; });
+
   try{
     const rows=await fetchBoard(boardMode);
     list.innerHTML=rows.map(r=>`
@@ -835,6 +893,20 @@ async function loadBoard(){
     st.textContent=t('boardFail');
   }
 }
+function boardSummaryHtml(s){
+  if(!s || !s.top) return `<div class="sum-empty">${t('noScores')}</div>`;
+  const me = s.me
+    ? `<div class="sum-card me"><span class="cap">${t('yourBest')}</span>
+         <b>#${s.me.rank}</b><span class="pt">${s.me.score} ${t('ptsShort')}</span>
+         <span class="ms">${s.me.best_ms ?? '—'} ms</span></div>`
+    : `<div class="sum-card me none"><span class="cap">${t('yourBest')}</span>
+         <b>—</b><span class="pt">${t('notPlayed')}</span></div>`;
+  return `<div class="sum-card top"><span class="cap">🥇 ${t('champion')}</span>
+      <b>${esc(s.top.name)}</b><span class="pt">${s.top.score} ${t('ptsShort')}</span>
+      <span class="ms">${s.top.best_ms ?? '—'} ms</span></div>${me}
+    <div class="sum-players">${s.players} ${t('playersTotal')}</div>`;
+}
+
 function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
 
 /* =====================================================================
@@ -879,6 +951,7 @@ function boot(){
   setLang(lang);
   renderWalletStatus(); renderLevelList(); renderLegend();
   detectHolder();
+  loadSummaries();
 }
 boot();
 </script>

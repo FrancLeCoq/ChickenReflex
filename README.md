@@ -3,7 +3,7 @@
 Mini-jeu de **réflexes de 30 secondes** aux couleurs de **Le Coq Francis**, jouable dans le navigateur et lançable comme **Mini App Telegram**.
 
 - 🌐 **En ligne :** https://franclecoq.github.io/ChickenReflex
-- 🏆 **Classement quotidien** hébergé sur Supabase
+- 🏆 **Classements généraux** hébergés sur Supabase, un par niveau
 
 ---
 
@@ -38,7 +38,9 @@ Le **temps de réaction est mesuré en millisecondes**, à partir de la frame r�
 | ⭐⭐ **Moyen** | 0,82 s | 310 ms | fréquents | **Hodlers $FRANC** |
 | ⭐⭐⭐ **Difficile** | 0,62 s | 215 ms | fréquents + œufs piégés | **Hodlers $FRANC** |
 
-Dans chaque partie, le rythme **s'accélère progressivement** (jusqu'à −22 % sur les 30 s) et les **6 dernières secondes** doublent la fréquence des renards. Chaque niveau a son propre classement.
+Dans chaque partie, le rythme **s'accélère progressivement** (jusqu'à −22 % sur les 30 s) et les **6 dernières secondes** doublent la fréquence des renards. Chaque niveau a son propre classement général.
+
+> Pas de PvP : le duel entre deux joueurs se joue en différé, via les classements.
 
 ### Déblocage $FRANC
 
@@ -46,14 +48,23 @@ Comme dans **Mastermind**, les niveaux verrouillés s'ouvrent en connectant un w
 
 ---
 
-## 🏆 Classement quotidien
+## 🏆 Classements généraux
 
-Le classement **repart à zéro chaque jour à minuit (heure de Paris)**. Il retient le **meilleur score par joueur et par jour**, départagé au **meilleur temps de réaction**.
+**Trois classements généraux**, un par niveau, calculés sur **tout l'historique** (pas de remise à zéro). Chacun retient le **meilleur score par joueur**, départagé au **meilleur temps de réaction** — à score égal, le plus rapide passe devant.
 
-Deux fonctions Postgres, appelées directement en RPC (aucun SDK à embarquer) :
+Sous chaque niveau, et en tête du classement, s'affichent **le champion avec sa médaille d'or** puis **le meilleur score du joueur avec son rang** :
 
-- `submit_reflex_score(...)` — enregistre une partie et renvoie `{rank, best, players}`
-- `reflex_leaderboard(mode, limit, player_id)` — le TOP 10 du jour, avec un `is_me` pour se surligner
+```
+🥇 Benoit 87     Toi #4 — 51
+```
+
+Chaque partie est **archivée** avec sa date (colonne `day`, en heure de Paris) : le jour où le jeu tourne bien, un classement quotidien se rebranche sans aucune migration de données.
+
+Trois fonctions Postgres, appelées directement en RPC (aucun SDK à embarquer) :
+
+- `submit_reflex_score(...)` — enregistre une partie et renvoie `{rank, best, best_ms, players}`
+- `reflex_leaderboard(mode, limit, player_id)` — le TOP 10 du niveau, avec un `is_me` pour se surligner
+- `reflex_summary(mode, player_id)` — le champion + le meilleur du joueur et son rang
 
 La table `reflex_scores` est **fermée par RLS** et `REVOKE` : le rôle `anon` ne peut pas la lire ni y écrire en direct. Tout passe par ces deux fonctions `SECURITY DEFINER`, qui valident les entrées :
 
