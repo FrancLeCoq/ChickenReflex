@@ -1,0 +1,886 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>CHICKEN REFLEX — Le Coq Francis</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Bangers&family=Fredoka+One&display=swap');
+
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;-webkit-user-select:none;user-select:none}
+:root{
+  --bg1:#0d0520; --bg2:#1a0840;
+  --gold:#FFD700; --purple:#c084fc; --purple-d:#6d28d9;
+  --green:#16a34a; --green-l:#a3e635;
+  --orange:#d97706; --orange-l:#fcd34d;
+  --cyan:#0ea5e9; --red:#ef4444;
+  --txt:#fff; --muted:#c9aaee;
+}
+html,body{height:100%}
+body{
+  background:linear-gradient(160deg,var(--bg1),var(--bg2));
+  background-attachment:fixed;
+  font-family:'Fredoka One',cursive;
+  color:var(--txt);
+  min-height:100vh;
+  display:flex; flex-direction:column; align-items:center;
+  padding:14px 14px calc(14px + env(safe-area-inset-bottom));
+  overflow-x:hidden;
+}
+body::before{
+  content:''; position:fixed; top:-120px; left:50%; transform:translateX(-50%);
+  width:380px; height:380px; border-radius:50%;
+  background:radial-gradient(circle,rgba(120,40,200,0.35),transparent 70%);
+  pointer-events:none; z-index:0;
+}
+.app{width:100%; max-width:420px; position:relative; z-index:1; display:flex; flex-direction:column; align-items:center}
+
+/* ===== HEADER ===== */
+.brand{display:flex; flex-direction:column; align-items:center; margin-bottom:14px; margin-top:4px}
+.brand img{width:96px; height:96px; object-fit:contain; filter:drop-shadow(0 6px 18px rgba(0,0,0,0.6)); animation:bob 3.2s ease-in-out infinite}
+@keyframes bob{0%,100%{transform:translateY(0) rotate(-1deg)}50%{transform:translateY(-7px) rotate(1deg)}}
+.brand h1{
+  font-family:'Bangers',cursive; font-size:34px; letter-spacing:4px;
+  color:var(--gold); text-shadow:0 0 22px rgba(255,215,0,0.55),0 3px 0 rgba(0,0,0,0.35);
+  margin-top:2px; line-height:1;
+}
+.brand .tagline{font-size:11px; color:var(--muted); letter-spacing:1px; margin-top:3px}
+
+/* ===== CARD ===== */
+.card{
+  width:100%;
+  background:linear-gradient(145deg,rgba(13,5,32,0.95),rgba(30,10,65,0.95));
+  border:2px solid rgba(180,100,255,0.30);
+  border-radius:24px; padding:22px 18px;
+  box-shadow:0 0 50px rgba(120,40,200,0.35);
+}
+.hidden{display:none!important}
+
+/* ===== PLEIN ECRAN EN JEU ===== */
+body.playing{padding:0; justify-content:flex-start}
+body.playing .brand{display:none}
+body.playing .app{max-width:480px}
+body.playing #screenGame.card{
+  border:none; border-radius:0; box-shadow:none; background:transparent;
+  padding:10px 10px calc(14px + env(safe-area-inset-bottom));
+  min-height:100vh; display:flex; flex-direction:column;
+}
+
+/* ===== Menu buttons ===== */
+.menu-btn{
+  width:100%; padding:18px; border:none; border-radius:16px;
+  font-family:'Bangers',cursive; font-size:22px; letter-spacing:2px;
+  color:#fff; cursor:pointer; margin-bottom:14px;
+  display:flex; align-items:center; justify-content:center; gap:12px;
+  touch-action:manipulation; transition:transform .12s,box-shadow .12s,opacity .12s;
+  position:relative; overflow:hidden;
+}
+.menu-btn:active{transform:scale(0.97)}
+.menu-btn .ico{font-size:24px; line-height:1}
+.menu-btn .lock{position:absolute; right:14px; font-size:20px; display:flex; align-items:center}
+#btnWallet{padding-right:44px; padding-top:12px; padding-bottom:12px; font-size:18px}
+.wallet-text{display:flex; flex-direction:column; align-items:center; line-height:1.1}
+.wallet-sub{font-family:'Fredoka One',cursive; font-size:10px; letter-spacing:.5px; margin-top:3px; opacity:.95}
+.wallet-sub.ok{color:#bbf7d0}
+.wallet-sub.warn{color:#fde68a}
+
+.btn-unique{background:linear-gradient(135deg,#7c3aed,#4c1d95); box-shadow:0 5px 22px rgba(124,58,237,0.45)}
+.btn-comp-green{background:linear-gradient(135deg,#16a34a,#15803d); box-shadow:0 5px 22px rgba(22,163,74,0.45)}
+.btn-comp-orange{background:linear-gradient(135deg,#d97706,#b45309); box-shadow:0 5px 22px rgba(217,119,6,0.40)}
+.btn-purple{background:linear-gradient(135deg,#a855f7,#6d28d9); box-shadow:0 5px 22px rgba(168,85,247,0.45)}
+.btn-neutral{background:rgba(255,255,255,0.10); border:1px solid rgba(168,85,247,0.35)}
+
+.back-btn{
+  width:auto; padding:8px 14px; margin-bottom:12px; border-radius:11px; cursor:pointer;
+  background:rgba(255,255,255,0.08); border:1px solid rgba(168,85,247,0.35);
+  color:var(--muted); font-family:'Fredoka One',cursive; font-size:12px; touch-action:manipulation;
+}
+.sec-title{font-family:'Bangers',cursive; font-size:24px; letter-spacing:2px; color:var(--gold); text-align:center}
+.sec-sub{font-size:11px; color:var(--muted); text-align:center; margin:4px 0 16px}
+
+.lang-row{display:flex; gap:12px; justify-content:center; margin-top:4px}
+.flag-btn{width:44px; height:30px; border-radius:7px; overflow:hidden; cursor:pointer; padding:0;
+  border:2px solid rgba(255,255,255,0.25); background:none; opacity:.45; transition:opacity .15s,border-color .15s}
+.flag-btn.on{opacity:1; border-color:var(--gold)}
+.flag-btn svg{width:100%; height:100%; display:block}
+
+/* ===== Difficulty buttons ===== */
+.lvl-btn{
+  width:100%; display:flex; align-items:center; justify-content:space-between;
+  padding:15px 16px; border-radius:14px; margin-bottom:11px; cursor:pointer;
+  font-family:'Fredoka One',cursive; font-size:15px; color:#fff;
+  border:1.5px solid rgba(168,85,247,0.35); background:rgba(124,58,237,0.18);
+  touch-action:manipulation; transition:transform .12s;
+}
+.lvl-btn:active{transform:scale(0.98)}
+.lvl-btn.unlocked{border-color:rgba(34,197,94,0.7); background:linear-gradient(135deg,rgba(22,163,74,0.30),rgba(21,128,61,0.30))}
+.lvl-btn.lockedb{border-color:rgba(217,119,6,0.7); background:linear-gradient(135deg,rgba(217,119,6,0.22),rgba(180,83,9,0.22))}
+.lvl-btn .lk{font-size:18px; display:flex; align-items:center; flex:0 0 auto}
+.lvl-btn .ll{display:flex; flex-direction:column; align-items:flex-start; gap:2px}
+.lvl-btn .stars{font-size:13px}
+.lvl-btn .meta-mini{font-size:10px; color:var(--muted)}
+
+/* ===== Scores ===== */
+.scores-box{margin-top:6px; background:rgba(255,255,255,0.04); border:1px solid rgba(168,85,247,0.25); border-radius:14px; padding:14px}
+.scores-box .sh{font-family:'Bangers',cursive; letter-spacing:1px; color:var(--gold); font-size:16px; margin-bottom:10px; text-align:center}
+.score-row{display:flex; align-items:center; gap:8px; padding:8px 10px; border-radius:10px; margin-bottom:6px; font-size:13px; background:rgba(255,255,255,0.03)}
+.score-row.me{background:rgba(168,85,247,0.22); border:1px solid rgba(192,132,252,0.5)}
+.score-row .rank{font-family:'Bangers',cursive; font-size:18px; width:30px; flex:0 0 auto}
+.score-row.r1 .rank{color:#FFD700}.score-row.r2 .rank{color:#d1d5db}.score-row.r3 .rank{color:#cd7f32}
+.score-row .who{flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+.score-row .val{font-family:'Bangers',cursive; letter-spacing:1px; color:var(--green-l); font-size:16px}
+.score-row .meta{font-size:10px; color:var(--muted); width:52px; text-align:right; flex:0 0 auto}
+.no-scores{text-align:center; color:var(--muted); font-size:12px; padding:8px; line-height:1.6}
+
+.tabs{display:flex; gap:6px; margin-bottom:12px}
+.tab{flex:1; padding:8px 4px; border-radius:10px; cursor:pointer; font-family:'Fredoka One',cursive; font-size:11px;
+  background:rgba(255,255,255,0.06); border:1px solid rgba(168,85,247,0.3); color:var(--muted); touch-action:manipulation}
+.tab.on{background:linear-gradient(135deg,#a855f7,#6d28d9); color:#fff; border-color:transparent}
+
+/* ===== GAME SCREEN ===== */
+.game-top{display:flex; align-items:center; justify-content:space-between; width:100%; margin-bottom:10px; gap:8px}
+.game-top .lvl-badge{font-family:'Bangers',cursive; letter-spacing:1px; font-size:16px; color:var(--gold); text-align:right}
+.hud{display:flex; gap:8px; flex-wrap:wrap; justify-content:center; width:100%; margin-bottom:10px}
+.hud .chip{background:rgba(255,255,255,0.06); border:1px solid rgba(168,85,247,0.3);
+  border-radius:12px; padding:6px 12px; display:flex; align-items:center; gap:6px}
+.hud .chip .lab{font-size:9px; color:var(--muted); letter-spacing:.5px}
+.hud .chip .num{font-family:'Bangers',cursive; font-size:17px; letter-spacing:1px}
+.chip.score .num{color:var(--green-l)}
+.chip.time .num{color:var(--cyan)}
+.chip.ms .num{color:var(--orange-l)}
+
+/* Aire de tap : volontairement enorme, c'est un jeu de reflexes. */
+#stage{
+  position:relative; flex:1; width:100%; min-height:340px;
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  border-radius:22px; border:2px dashed rgba(168,85,247,0.30);
+  background:radial-gradient(circle at 50% 45%,rgba(124,58,237,0.20),transparent 65%);
+  touch-action:manipulation; cursor:pointer; overflow:hidden; transition:border-color .1s,background .1s;
+}
+#stage.live{border-style:solid; border-color:rgba(34,197,94,0.65); background:radial-gradient(circle at 50% 45%,rgba(22,163,74,0.22),transparent 65%)}
+#stage.trap{border-color:rgba(239,68,68,0.8); background:radial-gradient(circle at 50% 45%,rgba(239,68,68,0.25),transparent 65%)}
+
+.sprite-wrap{position:relative; width:200px; height:200px; display:flex; align-items:center; justify-content:center}
+.sp{display:none; max-width:100%; max-height:100%; object-fit:contain;
+  filter:drop-shadow(0 8px 20px rgba(0,0,0,0.55)); pointer-events:none}
+.sp.on{display:block; animation:pop .13s ease-out}
+.sp.emoji{font-size:120px; line-height:1; align-items:center; justify-content:center}
+.sp.emoji.on{display:flex}
+@keyframes pop{from{transform:scale(0.72)}to{transform:scale(1)}}
+
+.badge-bomb{position:absolute; right:24px; bottom:26px; font-size:38px; display:none; pointer-events:none}
+.badge-bomb.on{display:block}
+.tgt-val{position:absolute; top:10px; right:14px; font-family:'Bangers',cursive; font-size:22px;
+  color:var(--gold); display:none; pointer-events:none}
+.tgt-val.on{display:block}
+
+#hint{font-family:'Bangers',cursive; font-size:30px; letter-spacing:3px; min-height:38px; margin-top:4px}
+#hint.go{color:var(--green-l)}
+#hint.no{color:#fca5a5}
+#flash{position:absolute; top:44%; left:0; right:0; text-align:center;
+  font-family:'Bangers',cursive; font-size:46px; letter-spacing:2px;
+  opacity:0; transition:opacity .12s; pointer-events:none; text-shadow:0 3px 0 rgba(0,0,0,.4)}
+#flash.show{opacity:1}
+#flash.ok{color:var(--green-l)}
+#flash.bad{color:#fca5a5}
+
+.legend{display:flex; flex-wrap:wrap; gap:6px; justify-content:center; margin-top:10px}
+.legend .lg{display:flex; align-items:center; gap:4px; font-size:10px; color:var(--muted);
+  background:rgba(255,255,255,0.05); border-radius:8px; padding:4px 8px}
+.legend .lg img{width:20px; height:20px; object-fit:contain}
+.legend .lg b{color:var(--gold); font-family:'Bangers',cursive; font-size:13px; letter-spacing:.5px}
+.legend .lg.no b{color:#fca5a5}
+
+/* ===== MODAL ===== */
+.modal-bg{position:fixed; inset:0; background:rgba(5,0,15,0.82); display:none;
+  align-items:center; justify-content:center; z-index:50; padding:18px}
+.modal-bg.on{display:flex}
+.modal{width:100%; max-width:360px; background:linear-gradient(145deg,#15082e,#26104f);
+  border:2px solid rgba(180,100,255,0.4); border-radius:22px; padding:22px 18px; text-align:center;
+  box-shadow:0 0 60px rgba(120,40,200,0.5)}
+.modal img{width:92px; height:92px; object-fit:contain; margin-bottom:6px; filter:drop-shadow(0 6px 16px rgba(0,0,0,.6))}
+.modal h3{font-family:'Bangers',cursive; font-size:26px; letter-spacing:2px; color:var(--gold); margin-bottom:6px}
+.modal p{font-size:12px; color:var(--muted); line-height:1.7; margin-bottom:14px}
+.stat-grid{display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin:12px 0 14px}
+.stat-grid > div{background:rgba(255,255,255,0.05); border-radius:11px; padding:9px 4px}
+.stat-grid span{display:block; font-size:9px; color:var(--muted); letter-spacing:.5px}
+.stat-grid b{display:block; font-family:'Bangers',cursive; font-size:20px; letter-spacing:1px; margin-top:2px}
+.stat-grid b.gold{color:var(--gold)}
+.name-row{display:flex; gap:8px; margin-bottom:14px}
+.name-row input{flex:1; padding:11px 12px; border-radius:11px; border:1px solid rgba(168,85,247,0.4);
+  background:rgba(255,255,255,0.07); color:#fff; font-family:'Fredoka One',cursive; font-size:13px; -webkit-user-select:text; user-select:text}
+.name-row input:focus{outline:none; border-color:var(--purple)}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- BRAND HEADER -->
+  <div class="brand">
+    <img alt="Francis" id="brandImg" src="assets/francis-default.webp">
+    <h1>CHICKEN REFLEX</h1>
+    <div class="tagline" id="tagline">LE COQ FRANCIS</div>
+  </div>
+
+  <!-- ============ MENU ============ -->
+  <div class="card" id="screenMenu">
+    <button class="menu-btn btn-unique" onclick="show('screenFree')">
+      <span class="ico">&#127919;</span><span id="lblFree">JEU LIBRE</span>
+    </button>
+
+    <button class="menu-btn btn-purple" onclick="openBoard()">
+      <span class="ico">&#127942;</span><span id="lblBoardBtn">CLASSEMENT DU JOUR</span>
+    </button>
+
+    <button class="menu-btn btn-comp-orange" id="btnWallet" onclick="goConnectWallet()">
+      <span class="ico">&#128091;</span>
+      <span class="wallet-text"><span id="lblWallet">CONNECT WALLET</span><span class="wallet-sub" id="walletSub"></span></span>
+      <span class="lock" id="walletLock"></span>
+    </button>
+
+    <div class="name-row" id="nameRow">
+      <input id="name" maxlength="24" placeholder="Ton pseudo">
+    </div>
+
+    <div class="lang-row">
+      <button class="flag-btn" id="flagFR" onclick="setLang('fr')">
+        <svg viewBox="0 0 3 2"><rect width="1" height="2" x="0" fill="#0055A4"/><rect width="1" height="2" x="1" fill="#fff"/><rect width="1" height="2" x="2" fill="#EF4135"/></svg>
+      </button>
+      <button class="flag-btn" id="flagEN" onclick="setLang('en')">
+        <svg viewBox="0 0 60 30"><clipPath id="s"><rect width="60" height="30"/></clipPath><g clip-path="url(#s)"><rect width="60" height="30" fill="#012169"/><path d="M0,0 60,30M60,0 0,30" stroke="#fff" stroke-width="6"/><path d="M0,0 60,30M60,0 0,30" stroke="#C8102E" stroke-width="4"/><path d="M30,0 30,30M0,15 60,15" stroke="#fff" stroke-width="10"/><path d="M30,0 30,30M0,15 60,15" stroke="#C8102E" stroke-width="6"/></g></svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- ============ FREE PLAY (difficulty) ============ -->
+  <div class="card hidden" id="screenFree">
+    <button class="back-btn" id="backFree" onclick="show('screenMenu')">Retour</button>
+    <div class="sec-title" id="freeTitle">JEU LIBRE</div>
+    <div class="sec-sub" id="freeSub">Choisis ta difficulte</div>
+    <div id="levelList"></div>
+  </div>
+
+  <!-- ============ LEADERBOARD ============ -->
+  <div class="card hidden" id="screenBoard">
+    <button class="back-btn" id="backBoard" onclick="show('screenMenu')">Retour</button>
+    <div class="sec-title" id="boardTitle">CLASSEMENT</div>
+    <div class="sec-sub" id="boardSub">Remis a zero chaque jour</div>
+    <div class="tabs" id="boardTabs"></div>
+    <div class="scores-box">
+      <div class="sh" id="lblTop">&#127941; TOP 10</div>
+      <div id="board"></div>
+      <div class="no-scores" id="boardState"></div>
+    </div>
+  </div>
+
+  <!-- ============ GAME ============ -->
+  <div class="card hidden" id="screenGame">
+    <div class="game-top">
+      <button class="back-btn" id="backGame" style="margin-bottom:0" onclick="quitGame()">Menu</button>
+      <span class="lvl-badge" id="lvlBadge"></span>
+    </div>
+
+    <div class="hud">
+      <div class="chip score"><span class="lab" id="labScore">SCORE</span><span class="num" id="score">0</span></div>
+      <div class="chip time"><span class="lab" id="labTime">TEMPS</span><span class="num" id="time">30.0</span></div>
+      <div class="chip ms"><span class="lab" id="labMs">REACTION</span><span class="num" id="reaction">— ms</span></div>
+    </div>
+
+    <div id="stage">
+      <span class="tgt-val" id="tgtVal"></span>
+      <div class="sprite-wrap">
+        <img class="sp" id="sp-francis" src="assets/francis-default.webp" alt="Francis">
+        <img class="sp" id="sp-valet"   src="assets/valet.webp"           alt="Valet">
+        <img class="sp" id="sp-reine"   src="assets/reine.webp"           alt="Reine">
+        <img class="sp" id="sp-roi"     src="assets/roi.webp"             alt="Roi">
+        <div class="sp emoji" id="sp-emoji"></div>
+        <span class="badge-bomb" id="badgeBomb">&#128163;</span>
+      </div>
+      <div id="hint"></div>
+      <div id="flash"></div>
+    </div>
+
+    <div class="legend" id="legend"></div>
+  </div>
+</div>
+
+<!-- ============ MODAL ============ -->
+<div class="modal-bg" id="modalBg">
+  <div class="modal">
+    <img id="modalImg" alt="">
+    <h3 id="modalTitle"></h3>
+    <p id="modalText"></p>
+    <div id="modalExtra"></div>
+    <button class="menu-btn btn-purple" style="margin-bottom:8px" id="modalBtn1" onclick="modalAction1()"></button>
+    <button class="menu-btn btn-neutral" id="modalBtn2" onclick="modalAction2()"></button>
+  </div>
+</div>
+
+<script>
+/* =====================================================================
+   CONSTANTES
+   ===================================================================== */
+const WALLET_PAGE = 'https://franclecoq.github.io/Wallet/connect-wallet.html';
+const BACKEND     = 'https://mubqtnqulpyehkgubhnh.supabase.co/functions/v1';
+const SUPA_URL    = 'https://mubqtnqulpyehkgubhnh.supabase.co';
+/* Cle publishable : publique par nature, elle n'ouvre que les 2 RPC du classement. */
+const SUPA_KEY    = 'sb_publishable_MbrOHPxXoldRT5aHzqBnqA_pqrdzVtl';
+
+const tg = window.Telegram?.WebApp;
+
+const ROUND_MS       = 30000;  // duree d'une partie
+const HUMAN_FLOOR_MS = 90;     // en dessous, c'est de l'anticipation, pas du reflexe
+const SCORE_FLOOR    = -99;
+const TRAP_POINTS    = -2;
+const EARLY_PENALTY  = -1;
+
+/* Cadenas SVG (l'emoji 🔓 rend mal sur Telegram/iOS) — identiques aux autres jeux Francis. */
+const LOCK_OPEN = '<svg width="20" height="22" viewBox="0 0 30 34" xmlns="http://www.w3.org/2000/svg" style="vertical-align:middle">'+
+  '<path d="M8 15 V10 a7 7 0 0 1 13.5 -2.6" fill="none" stroke="#bbf7d0" stroke-width="3.2" stroke-linecap="round"/>'+
+  '<rect x="4" y="15" width="22" height="16" rx="3" fill="#bbf7d0"/>'+
+  '<circle cx="15" cy="22" r="2.6" fill="#14532d"/>'+
+  '<rect x="13.7" y="22" width="2.6" height="5.5" rx="1.3" fill="#14532d"/></svg>';
+const LOCK_CLOSED = '<svg width="20" height="22" viewBox="0 0 30 34" xmlns="http://www.w3.org/2000/svg" style="vertical-align:middle">'+
+  '<path d="M8.5 15 V10 a6.5 6.5 0 0 1 13 0 V15" fill="none" stroke="#fde68a" stroke-width="3.2" stroke-linecap="round"/>'+
+  '<rect x="4" y="15" width="22" height="16" rx="3" fill="#fde68a"/>'+
+  '<circle cx="15" cy="22" r="2.6" fill="#78350f"/>'+
+  '<rect x="13.7" y="22" width="2.6" height="5.5" rx="1.3" fill="#78350f"/></svg>';
+
+/* ---------- Les cibles ----------
+   Les coqs de ChickenFight valent gros, les objets de la ferme valent 1,
+   le renard et l'oeuf piege coutent 2 points. */
+const TARGETS = {
+  egg:     {kind:'emoji', glyph:'🥚', pts:1},
+  corn:    {kind:'emoji', glyph:'🌽', pts:1},
+  worm:    {kind:'emoji', glyph:'🐛', pts:1},
+  coin:    {kind:'emoji', glyph:'💰', pts:1},
+  francis: {kind:'img',   el:'sp-francis',      pts:2},
+  valet:   {kind:'img',   el:'sp-valet',        pts:3},
+  reine:   {kind:'img',   el:'sp-reine',        pts:4},
+  roi:     {kind:'img',   el:'sp-roi',          pts:5},
+  fox:     {kind:'emoji', glyph:'🦊', pts:TRAP_POINTS, trap:true},
+  bomb:    {kind:'emoji', glyph:'🥚', pts:TRAP_POINTS, trap:true, bomb:true},
+};
+
+/* ---------- Les 3 niveaux ----------
+   window = temps d'affichage, gap = temps mort. Les 2 derniers sont holderOnly. */
+const LEVELS = [
+  {id:'easy',   stars:'⭐',              holderOnly:false, window:1100, gap:430,
+   weights:{egg:14,corn:13,worm:13,coin:12,francis:24,valet:12,reine:6,roi:2,fox:4,bomb:0}},
+  {id:'medium', stars:'⭐⭐',        holderOnly:true,  window:820,  gap:310,
+   weights:{egg:10,corn:10,worm:10,coin:10,francis:22,valet:14,reine:8,roi:3,fox:13,bomb:0}},
+  {id:'hard',   stars:'⭐⭐⭐',  holderOnly:true,  window:620,  gap:215,
+   weights:{egg:8,corn:8,worm:8,coin:8,francis:20,valet:14,reine:9,roi:4,fox:16,bomb:5}},
+];
+
+/* =====================================================================
+   i18n
+   ===================================================================== */
+const I18N = {
+  fr:{
+    free:'JEU LIBRE', boardBtn:'CLASSEMENT DU JOUR', wallet:'CONNECT WALLET',
+    freeTitle:'JEU LIBRE', freeSub:'Choisis ta difficulte',
+    boardTitle:'CLASSEMENT', boardSub:'Remis a zero chaque jour (minuit, Paris)',
+    top:'🏆 TOP 10', retour:'Retour', menu:'Menu',
+    lvl:['Facile','Moyen','Difficile'],
+    lvlMeta:['Ouvert a tous','Reserve aux hodlers $FRANC','Reserve aux hodlers $FRANC'],
+    score:'SCORE', time:'TEMPS', ms:'REACTION',
+    tap:'TAPE !', dontTap:'NE TAPE PAS !',
+    early:'TROP TOT', anticip:'ANTICIPE', missed:'RATE', dodged:'OUF !',
+    ready:'PRET ?', go:'GO !',
+    over:'PARTIE TERMINEE', rank:'RANG', hits:'TOUCHES', missCnt:'RATES',
+    best:'MEILLEUR', avg:'MOYENNE', pts:'POINTS',
+    sending:'Envoi du score...', sendFail:'Score non enregistre',
+    bestToday:'Meilleur du jour', players:'joueur(s) aujourd\'hui',
+    replay:'Rejouer', backMenu:'Retour au menu',
+    lockedLvl:'Ce niveau est reserve aux detenteurs de <b>$FRANC</b>.<br>Connecte ton wallet pour le debloquer !',
+    lockedTitle:'NIVEAU VERROUILLE', connect:'Connecter mon wallet', later:'Plus tard',
+    wConnected:'Connecte', wNoFranc:'Wallet connecte, pas de $FRANC', wNotConnected:'Non connecte',
+    nick:'Ton pseudo', noScores:'Personne n\'a encore joue aujourd\'hui. A toi !',
+    loading:'Chargement...', boardFail:'Classement indisponible',
+    share:'📣 Partager', legendNo:'NE PAS TAPER',
+  },
+  en:{
+    free:'FREE PLAY', boardBtn:'DAILY LEADERBOARD', wallet:'CONNECT WALLET',
+    freeTitle:'FREE PLAY', freeSub:'Choose your difficulty',
+    boardTitle:'LEADERBOARD', boardSub:'Resets every day (midnight, Paris)',
+    top:'🏆 TOP 10', retour:'Back', menu:'Menu',
+    lvl:['Easy','Medium','Hard'],
+    lvlMeta:['Open to everyone','$FRANC hodlers only','$FRANC hodlers only'],
+    score:'SCORE', time:'TIME', ms:'REACTION',
+    tap:'TAP !', dontTap:'DON\'T TAP !',
+    early:'TOO EARLY', anticip:'GUESSED', missed:'MISSED', dodged:'PHEW !',
+    ready:'READY ?', go:'GO !',
+    over:'GAME OVER', rank:'RANK', hits:'HITS', missCnt:'MISSES',
+    best:'BEST', avg:'AVERAGE', pts:'POINTS',
+    sending:'Sending score...', sendFail:'Score not saved',
+    bestToday:'Best today', players:'player(s) today',
+    replay:'Replay', backMenu:'Back to menu',
+    lockedLvl:'This level is reserved for <b>$FRANC</b> holders.<br>Connect your wallet to unlock!',
+    lockedTitle:'LEVEL LOCKED', connect:'Connect my wallet', later:'Later',
+    wConnected:'Connected', wNoFranc:'Wallet linked, no $FRANC', wNotConnected:'Not connected',
+    nick:'Your nickname', noScores:'Nobody played today yet. Go !',
+    loading:'Loading...', boardFail:'Leaderboard unavailable',
+    share:'📣 Share', legendNo:'DON\'T TAP',
+  },
+};
+let lang = localStorage.getItem('flcr_lang') || 'fr';
+function t(k){return I18N[lang][k]}
+
+/* =====================================================================
+   ETAT HODLER (meme mecanique que Mastermind)
+   ===================================================================== */
+let isHolder     = JSON.parse(localStorage.getItem('flcr_holder') || 'false');
+let walletLinked = JSON.parse(localStorage.getItem('flcr_walletLinked') || 'false');
+let francBalance = Number(localStorage.getItem('flcr_balance') || 0);
+let unlockReason = localStorage.getItem('flcr_reason') || null; // "solana" | "ton" | "stars" | null
+
+async function detectHolder(){
+  if(tg?.initData){
+    try{
+      const res = await fetch(BACKEND+'/check-franc',{
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({initData:tg.initData})
+      });
+      const d = await res.json();
+      walletLinked = !!(d && d.walletLinked);
+      isHolder     = !!(d && (d.unlocked ?? (d.walletLinked && d.hasFranc)));
+      unlockReason = (d && d.reason) || (isHolder ? 'solana' : null);
+      francBalance = isHolder ? Number(d.balance || 0) : 0;
+      localStorage.setItem('flcr_holder', JSON.stringify(isHolder));
+      localStorage.setItem('flcr_balance', String(francBalance));
+      localStorage.setItem('flcr_walletLinked', JSON.stringify(walletLinked));
+      localStorage.setItem('flcr_reason', unlockReason || '');
+    }catch(e){}
+  }
+  renderWalletStatus(); renderLevelList();
+}
+function renderWalletStatus(){
+  const sub=document.getElementById('walletSub'), lock=document.getElementById('walletLock'),
+        btn=document.getElementById('btnWallet');
+  btn.classList.remove('btn-comp-green','btn-comp-orange');
+  if(isHolder){
+    lock.innerHTML=LOCK_OPEN; btn.classList.add('btn-comp-green'); sub.className='wallet-sub ok';
+    if(unlockReason==='stars'){ sub.textContent='Unlocked via ⭐'; }
+    else{
+      const sym = unlockReason==='ton' ? '💎' : '◎'; // 💎 TON · ◎ Solana
+      const bal = francBalance ? Number(francBalance).toLocaleString() : '?';
+      sub.textContent=`${t('wConnected')} ${sym} · ${bal} $FRANC`;
+    }
+  } else {
+    sub.className='wallet-sub warn';
+    sub.textContent = walletLinked ? t('wNoFranc') : t('wNotConnected');
+    lock.innerHTML=LOCK_CLOSED; btn.classList.add('btn-comp-orange');
+  }
+}
+function goConnectWallet(){ window.location.href = WALLET_PAGE; }
+
+/* =====================================================================
+   IDENTITE JOUEUR
+   ===================================================================== */
+let player = resolvePlayer();
+function resolvePlayer(){
+  const u = tg?.initDataUnsafe?.user;
+  if(u?.id){
+    const n = u.username || [u.first_name,u.last_name].filter(Boolean).join(' ');
+    return {id:'tg:'+u.id, name:(n||'Poulet').slice(0,24), fromTelegram:true};
+  }
+  let id = localStorage.getItem('flcr_pid');
+  if(!id){
+    id = 'web:' + (crypto.randomUUID ? crypto.randomUUID() : Date.now()+'-'+Math.random().toString(16).slice(2));
+    localStorage.setItem('flcr_pid', id);
+  }
+  return {id, name:(localStorage.getItem('flcr_name')||'Poulet').slice(0,24), fromTelegram:false};
+}
+
+/* =====================================================================
+   CLASSEMENT (RPC Supabase)
+   ===================================================================== */
+async function rpc(name, body){
+  const res = await fetch(`${SUPA_URL}/rest/v1/rpc/${name}`,{
+    method:'POST',
+    headers:{'Content-Type':'application/json', apikey:SUPA_KEY, Authorization:'Bearer '+SUPA_KEY},
+    body:JSON.stringify(body)
+  });
+  if(!res.ok) throw new Error(await res.text().catch(()=>res.status));
+  return res.json();
+}
+const submitScore = (stats,mode) => rpc('submit_reflex_score',{
+  p_player_id:player.id, p_player_name:player.name, p_score:stats.score,
+  p_hits:stats.hits, p_misses:stats.misses, p_best_ms:stats.bestMs,
+  p_avg_ms:stats.avgMs, p_mode:mode
+});
+const fetchBoard = (mode) => rpc('reflex_leaderboard',{p_mode:mode, p_limit:10, p_player_id:player.id});
+
+/* =====================================================================
+   ECRANS
+   ===================================================================== */
+const SCREENS=['screenMenu','screenFree','screenBoard','screenGame'];
+function show(id){
+  SCREENS.forEach(s=>document.getElementById(s).classList.toggle('hidden', s!==id));
+  document.body.classList.toggle('playing', id==='screenGame');
+  window.scrollTo(0,0);
+}
+
+function setLang(l){
+  lang=l; localStorage.setItem('flcr_lang',l);
+  document.getElementById('flagFR').classList.toggle('on', l==='fr');
+  document.getElementById('flagEN').classList.toggle('on', l==='en');
+  document.getElementById('lblFree').textContent=t('free');
+  document.getElementById('lblBoardBtn').textContent=t('boardBtn');
+  document.getElementById('lblWallet').textContent=t('wallet');
+  document.getElementById('freeTitle').textContent=t('freeTitle');
+  document.getElementById('freeSub').textContent=t('freeSub');
+  document.getElementById('boardTitle').textContent=t('boardTitle');
+  document.getElementById('boardSub').textContent=t('boardSub');
+  document.getElementById('lblTop').textContent=t('top');
+  document.getElementById('backFree').textContent=t('retour');
+  document.getElementById('backBoard').textContent=t('retour');
+  document.getElementById('backGame').textContent=t('menu');
+  document.getElementById('labScore').textContent=t('score');
+  document.getElementById('labTime').textContent=t('time');
+  document.getElementById('labMs').textContent=t('ms');
+  document.getElementById('name').placeholder=t('nick');
+  renderWalletStatus(); renderLevelList(); renderTabs(); renderLegend();
+}
+
+function renderLevelList(){
+  const list=document.getElementById('levelList'); list.innerHTML='';
+  LEVELS.forEach((lv,i)=>{
+    const unlocked = !lv.holderOnly || isHolder;
+    const btn=document.createElement('button');
+    btn.className='lvl-btn '+(unlocked?'unlocked':'lockedb');
+    btn.innerHTML=`<span class="ll"><span><span class="stars">${lv.stars}</span> ${t('lvl')[i]}</span>
+        <span class="meta-mini">${t('lvlMeta')[i]} · ${(lv.window/1000).toFixed(2)}s</span></span>
+      <span class="lk">${unlocked?LOCK_OPEN:LOCK_CLOSED}</span>`;
+    btn.onclick=()=>{ if(!unlocked){ showLockModal(); return; } startGame(i); };
+    list.appendChild(btn);
+  });
+}
+
+function renderTabs(){
+  const tabs=document.getElementById('boardTabs'); tabs.innerHTML='';
+  LEVELS.forEach((lv,i)=>{
+    const b=document.createElement('button');
+    b.className='tab'+(boardMode===lv.id?' on':'');
+    b.textContent=t('lvl')[i];
+    b.onclick=()=>{ boardMode=lv.id; renderTabs(); loadBoard(); };
+    tabs.appendChild(b);
+  });
+}
+
+function renderLegend(){
+  const rows=[
+    {k:'francis',v:'+2'},{k:'valet',v:'+3'},{k:'reine',v:'+4'},{k:'roi',v:'+5'},
+  ];
+  const src={francis:'assets/francis-default.webp',valet:'assets/valet.webp',
+             reine:'assets/reine.webp',roi:'assets/roi.webp'};
+  let html = `<span class="lg"><span style="font-size:16px">🥚🌽🐛💰</span><b>+1</b></span>`;
+  html += rows.map(r=>`<span class="lg"><img src="${src[r.k]}" alt=""><b>${r.v}</b></span>`).join('');
+  html += `<span class="lg no"><span style="font-size:16px">🦊</span><b>${t('legendNo')}</b></span>`;
+  document.getElementById('legend').innerHTML=html;
+}
+
+/* =====================================================================
+   MOTEUR DU JEU
+   ===================================================================== */
+const el={};
+['stage','hint','flash','score','time','reaction','lvlBadge','sp-emoji','badgeBomb','tgtVal']
+  .forEach(id=>el[id]=document.getElementById(id));
+
+const G={
+  state:'idle', level:0, startedAt:0, score:0, hits:0, misses:0, times:[],
+  current:null, shownAt:0, penalised:false, spawnT:null, expireT:null, raf:0,
+};
+
+function pickTarget(lv, elapsed){
+  const w={...lv.weights};
+  // Rush final : les 6 dernieres secondes, le renard sort deux fois plus.
+  if(elapsed > ROUND_MS-6000){ w.fox*=2; w.bomb*=2; }
+  let total=0; for(const k in w) total+=w[k];
+  let r=Math.random()*total;
+  for(const k in w){ r-=w[k]; if(r<=0) return k; }
+  return 'francis';
+}
+
+// Le rythme s'accelere progressivement pendant la partie (jusqu'a -22%).
+function pace(lv, elapsed){
+  const f = 1 - 0.22*(elapsed/ROUND_MS);
+  return {window: Math.round(lv.window*f), gap: Math.round(lv.gap*f)};
+}
+
+function clearSprites(){
+  document.querySelectorAll('.sp').forEach(s=>s.classList.remove('on'));
+  el.badgeBomb.classList.remove('on');
+  el.tgtVal.classList.remove('on');
+}
+
+function spawn(){
+  if(G.state!=='running') return;
+  const lv=LEVELS[G.level];
+  const elapsed=performance.now()-G.startedAt;
+  const key=pickTarget(lv,elapsed);
+  const tgt=TARGETS[key];
+  const {window:win, gap}=pace(lv,elapsed);
+
+  G.current=tgt; G.penalised=false;
+
+  clearSprites();
+  if(tgt.kind==='img'){
+    document.getElementById(tgt.el).classList.add('on');
+  } else {
+    el['sp-emoji'].textContent=tgt.glyph;
+    el['sp-emoji'].classList.add('on');
+  }
+  if(tgt.bomb) el.badgeBomb.classList.add('on');
+  if(!tgt.trap){ el.tgtVal.textContent='+'+tgt.pts; el.tgtVal.classList.add('on'); }
+
+  el.hint.textContent = tgt.trap ? t('dontTap') : t('tap');
+  el.hint.className   = tgt.trap ? 'no' : 'go';
+  el.stage.classList.add('live');
+  el.stage.classList.toggle('trap', !!tgt.trap);
+
+  // Le chrono demarre a la frame reellement peinte, pas a l'appel JS.
+  requestAnimationFrame(()=>{
+    G.shownAt=performance.now();
+    clearTimeout(G.expireT);
+    G.expireT=setTimeout(()=>expire(gap), win);
+  });
+}
+
+function clearTarget(){
+  clearTimeout(G.expireT);
+  G.current=null; G.penalised=false;
+  clearSprites();
+  el.hint.textContent=''; el.hint.className='';
+  el.stage.classList.remove('live','trap');
+}
+
+function expire(gap){
+  if(G.state!=='running' || !G.current) return;
+  if(G.current.trap){ feedback(t('dodged'),'ok'); }   // ne pas taper le renard = bon reflexe
+  else { G.misses++; feedback(t('missed'),'bad'); }
+  clearTarget();
+  G.spawnT=setTimeout(spawn, gap);
+}
+
+function addScore(d){
+  G.score=Math.max(SCORE_FLOOR, G.score+d);
+  el.score.textContent=G.score;
+}
+
+function onTap(){
+  if(G.state!=='running') return;
+
+  // Tap dans le vide (y compris pendant le "PRET ?") : anti-matraquage,
+  // une seule penalite par cible.
+  if(!G.current){
+    if(!G.penalised){ G.penalised=true; addScore(EARLY_PENALTY); feedback(t('early'),'bad'); }
+    return;
+  }
+  const lv=LEVELS[G.level];
+  const {gap}=pace(lv, performance.now()-G.startedAt);
+  const rt=Math.round(performance.now()-G.shownAt);
+  // Plus rapide que le reflexe humain = anticipation, ca ne compte pas.
+  if(rt<HUMAN_FLOOR_MS){
+    if(!G.penalised){ G.penalised=true; addScore(EARLY_PENALTY); feedback(t('anticip'),'bad'); }
+    return;
+  }
+
+  if(G.current.trap){
+    addScore(TRAP_POINTS);
+    feedback(TRAP_POINTS+' 🦊','bad');
+  } else {
+    addScore(G.current.pts);
+    G.hits++; G.times.push(rt);
+    el.reaction.textContent=rt+' ms';
+    feedback('+'+G.current.pts,'ok');
+  }
+  clearTarget();
+  G.spawnT=setTimeout(spawn, gap);
+}
+
+let flashT=null;
+function feedback(text,kind){
+  el.flash.textContent=text;
+  el.flash.className='show '+kind;
+  clearTimeout(flashT);
+  flashT=setTimeout(()=>{el.flash.className='';},360);
+  if(kind==='bad') tg?.HapticFeedback?.notificationOccurred?.('error');
+  else tg?.HapticFeedback?.impactOccurred?.('light');
+}
+
+function tick(){
+  if(G.state!=='running') return;
+  const left=Math.max(0, ROUND_MS-(performance.now()-G.startedAt));
+  el.time.textContent=(left/1000).toFixed(1);
+  if(left<=0){ finish(); return; }
+  G.raf=requestAnimationFrame(tick);
+}
+
+function startGame(levelIndex){
+  const lv=LEVELS[levelIndex];
+  if(lv.holderOnly && !isHolder){ showLockModal(); return; }
+
+  if(!player.fromTelegram){
+    const typed=document.getElementById('name').value.trim();
+    if(typed){ localStorage.setItem('flcr_name', typed.slice(0,24)); player=resolvePlayer(); }
+  }
+
+  Object.assign(G,{state:'running', level:levelIndex, score:0, hits:0, misses:0,
+                   times:[], current:null, penalised:false});
+  el.score.textContent='0';
+  el.reaction.textContent='— ms';
+  el.time.textContent=(ROUND_MS/1000).toFixed(1);
+  el.lvlBadge.textContent=`${lv.stars} ${t('lvl')[levelIndex]}`;
+  clearTarget();
+  closeModal();
+  show('screenGame');
+
+  // Petit compte a rebours : personne ne demarre en plein reflexe.
+  el.hint.className='go';
+  el.hint.textContent=t('ready');
+  setTimeout(()=>{
+    if(G.state!=='running') return;
+    el.hint.textContent=t('go');
+    G.startedAt=performance.now();
+    G.raf=requestAnimationFrame(tick);
+    G.spawnT=setTimeout(spawn, 350);
+  }, 900);
+}
+
+function stopLoops(){
+  cancelAnimationFrame(G.raf);
+  clearTimeout(G.spawnT); clearTimeout(G.expireT);
+}
+function quitGame(){
+  G.state='idle'; stopLoops(); clearTarget(); show('screenMenu');
+}
+
+async function finish(){
+  G.state='over'; stopLoops(); clearTarget();
+  el.time.textContent='0.0';
+
+  const stats={
+    score:G.score, hits:G.hits, misses:G.misses,
+    bestMs: G.times.length ? Math.min(...G.times) : null,
+    avgMs:  G.times.length ? Math.round(G.times.reduce((a,b)=>a+b,0)/G.times.length) : null,
+  };
+  const mode=LEVELS[G.level].id;
+
+  openModal({
+    img: stats.score>0 ? 'assets/francis-happy.webp' : 'assets/francis-sad.webp',
+    title: t('over'),
+    text: '',
+    extra:`<div class="stat-grid">
+        <div><span>${t('pts')}</span><b class="gold">${stats.score}</b></div>
+        <div><span>${t('hits')}</span><b>${stats.hits}</b></div>
+        <div><span>${t('missCnt')}</span><b>${stats.misses}</b></div>
+        <div><span>${t('best')}</span><b>${stats.bestMs ?? '—'}</b></div>
+        <div><span>${t('avg')}</span><b>${stats.avgMs ?? '—'}</b></div>
+        <div><span>${t('rank')}</span><b class="gold" id="rankVal">…</b></div>
+      </div>
+      <p id="subState">${t('sending')}</p>`,
+    btn1:t('replay'), btn2:t('backMenu'),
+    a1:()=>startGame(G.level),
+    a2:()=>{ closeModal(); boardMode=mode; openBoard(); },
+  });
+
+  try{
+    const r=await submitScore(stats, mode);
+    document.getElementById('rankVal').textContent='#'+r.rank;
+    document.getElementById('subState').innerHTML=
+      `${t('bestToday')} : <b style="color:var(--green-l)">${r.best}</b> · ${r.players} ${t('players')}`;
+    addShareButton(r, stats);
+  }catch(e){
+    document.getElementById('rankVal').textContent='—';
+    document.getElementById('subState').textContent=t('sendFail');
+  }
+}
+
+function addShareButton(r, stats){
+  if(!tg?.openTelegramLink) return;
+  const txt=`🐓 ${player.name} vient de scorer ${r.score} a CHICKEN REFLEX `+
+            `(${stats.bestMs??'?'} ms, rang #${r.rank}) ! Tu fais mieux ? 🥚`;
+  const b=document.createElement('button');
+  b.className='menu-btn btn-comp-green'; b.style.marginTop='4px';
+  b.textContent=t('share');
+  b.onclick=()=>tg.openTelegramLink(
+    'https://t.me/share/url?url='+encodeURIComponent(location.href)+'&text='+encodeURIComponent(txt));
+  document.getElementById('modalExtra').appendChild(b);
+}
+
+/* =====================================================================
+   CLASSEMENT — ECRAN
+   ===================================================================== */
+let boardMode = localStorage.getItem('flcr_boardMode') || 'easy';
+function openBoard(){ renderTabs(); show('screenBoard'); loadBoard(); }
+
+async function loadBoard(){
+  localStorage.setItem('flcr_boardMode', boardMode);
+  const list=document.getElementById('board'), st=document.getElementById('boardState');
+  list.innerHTML=''; st.textContent=t('loading');
+  try{
+    const rows=await fetchBoard(boardMode);
+    list.innerHTML=rows.map(r=>`
+      <div class="score-row r${r.rank} ${r.is_me?'me':''}">
+        <span class="rank">${r.rank===1?'🥇':r.rank===2?'🥈':r.rank===3?'🥉':'#'+r.rank}</span>
+        <span class="who">${esc(r.player_name)}</span>
+        <span class="val">${r.score}</span>
+        <span class="meta">${r.best_ms ?? '—'} ms</span>
+      </div>`).join('');
+    st.textContent = rows.length ? '' : t('noScores');
+  }catch(e){
+    st.textContent=t('boardFail');
+  }
+}
+function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+
+/* =====================================================================
+   MODAL
+   ===================================================================== */
+let mA1=null, mA2=null;
+function openModal({img,title,text,extra,btn1,btn2,a1,a2}){
+  const bg=document.getElementById('modalBg');
+  const im=document.getElementById('modalImg');
+  if(img){ im.src=img; im.style.display='block'; } else { im.style.display='none'; }
+  document.getElementById('modalTitle').textContent=title;
+  document.getElementById('modalText').innerHTML=text||'';
+  document.getElementById('modalText').style.display = text ? 'block':'none';
+  document.getElementById('modalExtra').innerHTML=extra||'';
+  document.getElementById('modalBtn1').textContent=btn1;
+  document.getElementById('modalBtn2').textContent=btn2;
+  mA1=a1; mA2=a2;
+  bg.classList.add('on');
+}
+function closeModal(){ document.getElementById('modalBg').classList.remove('on'); }
+function modalAction1(){ if(mA1) mA1(); }
+function modalAction2(){ if(mA2) mA2(); }
+
+function showLockModal(){
+  openModal({
+    img:'assets/francis-sad.webp', title:t('lockedTitle'), text:t('lockedLvl'),
+    btn1:t('connect'), btn2:t('later'),
+    a1:()=>{ closeModal(); goConnectWallet(); },
+    a2:()=>closeModal(),
+  });
+}
+
+/* =====================================================================
+   BOOT
+   ===================================================================== */
+el.stage.addEventListener('pointerdown', e=>{ e.preventDefault(); onTap(); });
+
+function boot(){
+  if(tg){ tg.ready(); tg.expand(); }
+  document.getElementById('nameRow').style.display = player.fromTelegram ? 'none':'flex';
+  document.getElementById('name').value = player.fromTelegram ? '' : player.name;
+  setLang(lang);
+  renderWalletStatus(); renderLevelList(); renderLegend();
+  detectHolder();
+}
+boot();
+</script>
+</body>
+</html>
