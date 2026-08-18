@@ -35,7 +35,7 @@ Le **temps de réaction est mesuré en millisecondes**, à partir de la frame r�
 | Niveau | Affichage | Temps mort | Renards | Accès |
 |--------|:---------:|:----------:|:-------:|-------|
 | ⭐ **Facile** | 1,10 s | 430 ms | rares | **Tous** |
-| ⭐⭐ **Moyen** | 0,82 s | 310 ms | fréquents | **Hodlers $FRANC** |
+| ⭐⭐ **Moyen** | 0,82 s | 310 ms | fréquents | **Tous** |
 | ⭐⭐⭐ **Difficile** | 0,62 s | 215 ms | fréquents + œufs piégés | **Hodlers $FRANC** |
 
 Dans chaque partie, le rythme **s'accélère progressivement** (jusqu'à −22 % sur les 30 s) et les **6 dernières secondes** doublent la fréquence des renards. Chaque niveau a son propre classement général.
@@ -44,7 +44,7 @@ Dans chaque partie, le rythme **s'accélère progressivement** (jusqu'à −22 %
 
 ### Déblocage $FRANC
 
-Comme dans **Mastermind**, les niveaux verrouillés s'ouvrent en connectant un wallet détenant des **$FRANC** (Solana ◎ / TON 💎, ou déblocage via Telegram Stars ⭐). La vérification passe par la fonction Edge `check-franc`, avec l'`initData` Telegram — le déverrouillage n'est donc pas falsifiable côté client.
+**Facile** et **Moyen** sont ouverts à tout le monde. Seul **Difficile** est réservé : il s'ouvre en connectant un wallet détenant des **$FRANC** (Solana ◎ / TON 💎), ou via un déblocage **Telegram Stars ⭐**. Comme dans **Mastermind**, la vérification passe par la fonction Edge `check-franc` avec l'`initData` Telegram — le déverrouillage n'est donc pas falsifiable côté client.
 
 ---
 
@@ -68,21 +68,31 @@ Si le joueur est **hors du TOP 10**, sa ligne apparaît quand même, séparée p
 
 ### Une seule ligne par joueur, écrite seulement sur record
 
-La base ne garde **que le meilleur score de chaque joueur par niveau** — contrainte d'unicité sur `(player_id, mode)`. Une partie qui ne bat pas le record **ne déclenche aucun appel réseau** : le client connaît son record (localStorage) et ne parle à Supabase que s'il le dépasse. Les classements se rafraîchissent au démarrage de l'application.
+La base ne garde **que le meilleur score de chaque joueur par niveau** — contrainte d'unicité sur `(player_id, mode)`.
+
+Supabase n'est sollicité qu'à **deux moments**, jamais au démarrage :
+
+| Événement | Appel |
+|---|---|
+| Lancement de l'application | **aucun** — les lignes sous les niveaux viennent du cache local |
+| Partie sans record | **aucun** |
+| Partie avec record | 1 écriture (`submit_reflex_score`) |
+| Ouverture du classement général | 1 lecture (`reflex_board`) |
+
+Le client connaît son record via `localStorage` et ne parle à Supabase que s'il le dépasse. Après un record, le cache est mis à jour avec ce que la réponse contient déjà — pas de second appel.
 
 Le serveur revérifie de son côté avec un **upsert conditionnel** : un `localStorage` vidé ou un autre appareil ne peut pas écraser un meilleur score par erreur. Même règle que le classement — on écrase si le score est supérieur, ou égal avec un meilleur temps de réaction.
 
-Trois fonctions Postgres, appelées directement en RPC (aucun SDK à embarquer) :
+Deux fonctions Postgres, appelées directement en RPC (aucun SDK à embarquer) :
 
 - `submit_reflex_score(...)` — upsert conditionnel, renvoie `{improved, rank, best, best_ms, players}`
 - `reflex_board(mode, limit, player_id)` — TOP N **+ la ligne du joueur**, en un seul appel
-- `reflex_home(player_id)` — les **3 niveaux d'un coup** (champion + place du joueur) au démarrage
 
 La table `reflex_scores` est **fermée par RLS** et `REVOKE` : le rôle `anon` ne peut pas la lire ni y écrire en direct. Tout passe par ces deux fonctions `SECURITY DEFINER`, qui valident les entrées :
 
 - score plafonné à `hits × 5` (la cible la plus riche vaut 5)
 - compteurs bornés, temps de réaction contraints entre 90 et 5000 ms
-- une seule soumission toutes les 15 s par joueur
+- upsert conditionnel : un score inférieur au record ne peut rien écraser
 
 > ⚠️ Le score reste calculé par le client : ces garde-fous rendent la triche pénible et bornée, ils ne la rendent pas impossible. Pour un verrouillage complet il faudrait rejouer la partie côté serveur.
 

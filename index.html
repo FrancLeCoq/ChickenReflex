@@ -392,11 +392,11 @@ const TARGETS = {
 };
 
 /* ---------- Les 3 niveaux ----------
-   window = temps d'affichage, gap = temps mort. Les 2 derniers sont holderOnly. */
+   window = temps d'affichage, gap = temps mort. Seul Difficile est holderOnly. */
 const LEVELS = [
   {id:'easy',   stars:'⭐',              holderOnly:false, window:1100, gap:430,
    weights:{egg:14,corn:13,worm:13,coin:12,francis:24,valet:12,reine:6,roi:2,fox:4,bomb:0}},
-  {id:'medium', stars:'⭐⭐',        holderOnly:true,  window:820,  gap:310,
+  {id:'medium', stars:'⭐⭐',        holderOnly:false,  window:820,  gap:310,
    weights:{egg:10,corn:10,worm:10,coin:10,francis:22,valet:14,reine:8,roi:3,fox:13,bomb:0}},
   {id:'hard',   stars:'⭐⭐⭐',  holderOnly:true,  window:620,  gap:215,
    weights:{egg:8,corn:8,worm:8,coin:8,francis:20,valet:14,reine:9,roi:4,fox:16,bomb:5}},
@@ -416,7 +416,7 @@ const I18N = {
     yourRecord:'Ton record',
     yourBest:'Ton meilleur', ptsShort:'pts', playersTotal:'joueur(s) classe(s)',
     lvl:['Facile','Moyen','Difficile'],
-    lvlMeta:['Ouvert a tous','Reserve aux hodlers $FRANC','Reserve aux hodlers $FRANC'],
+    lvlMeta:['Ouvert a tous','Ouvert a tous','Reserve aux hodlers $FRANC'],
     score:'SCORE', time:'TEMPS', ms:'REACTION',
     tap:'TAPE !', dontTap:'NE TAPE PAS !',
     early:'TROP TOT', anticip:'ANTICIPE', missed:'RATE', dodged:'OUF !',
@@ -443,7 +443,7 @@ const I18N = {
     yourRecord:'Your record',
     yourBest:'Your best', ptsShort:'pts', playersTotal:'ranked player(s)',
     lvl:['Easy','Medium','Hard'],
-    lvlMeta:['Open to everyone','$FRANC hodlers only','$FRANC hodlers only'],
+    lvlMeta:['Open to everyone','Open to everyone','$FRANC hodlers only'],
     score:'SCORE', time:'TIME', ms:'REACTION',
     tap:'TAP !', dontTap:'DON\'T TAP !',
     early:'TOO EARLY', anticip:'GUESSED', missed:'MISSED', dodged:'PHEW !',
@@ -547,10 +547,9 @@ const submitScore = (stats,mode) => rpc('submit_reflex_score',{
   p_hits:stats.hits, p_misses:stats.misses, p_best_ms:stats.bestMs,
   p_avg_ms:stats.avgMs, p_mode:mode
 });
-/* Un seul appel pour la page classement (TOP N + la ligne du joueur), et un
-   seul pour les 3 niveaux au demarrage. */
+/* Le seul appel de lecture du jeu : TOP N + la ligne du joueur, d'un coup.
+   Declenche uniquement quand le joueur ouvre le classement general. */
 const fetchBoard = (mode) => rpc('reflex_board',{p_mode:mode, p_limit:10, p_player_id:player.id});
-const fetchHome  = ()     => rpc('reflex_home',{p_player_id:player.id});
 
 /* ---------- Record local ----------
    On n'ecrit dans Supabase que si la partie bat le record du joueur. Le record
@@ -573,28 +572,25 @@ function isRecord(mode, score, ms){
   return score === b.score && ms != null && (b.ms == null || ms < b.ms);
 }
 
-/* Resume d'un niveau : le champion en medaille or, puis le meilleur du joueur
-   et son rang. Alimente la ligne sous chaque mode et l'entete du classement. */
-const SUMMARIES = {}; // mode -> resume, garde en memoire entre deux rendus
+/* ---------- Resume par niveau (champion + place du joueur) ----------
+   Purement local : rien n'est charge au demarrage. Le cache est rafraichi
+   quand le joueur ouvre le classement general, ou quand il bat son record. */
+const SUM_KEY = 'flcr_sum';
+let SUMMARIES = (() => {
+  try{ return JSON.parse(localStorage.getItem(SUM_KEY)) || {}; }catch(e){ return {}; }
+})();
+function saveSummaries(){
+  localStorage.setItem(SUM_KEY, JSON.stringify(SUMMARIES));
+}
 function summaryLine(s){
-  if(!s || !s.top) return `<span class="sum empty">${t('noScores')}</span>`;
+  // Jamais consulte : on n'affiche rien plutot que d'inventer un classement vide.
+  if(!s) return '';
+  if(!s.top) return `<span class="sum empty">${t('noScores')}</span>`;
   const top = `<span class="sum-top">🥇 ${esc(s.top.name)} <b>${s.top.score}</b></span>`;
   const me  = s.me
     ? `<span class="sum-me">${t('you')} <b>#${s.me.rank}</b> — ${s.me.score}</span>`
     : `<span class="sum-me none">${t('notPlayed')}</span>`;
   return `<span class="sum">${top}${me}</span>`;
-}
-/* Un appel, les 3 niveaux. Resynchronise au passage le record local. */
-async function loadSummaries(){
-  try{
-    const home = await fetchHome();
-    LEVELS.forEach(lv=>{
-      const s = home?.[lv.id] || null;
-      SUMMARIES[lv.id] = s;
-      if(s?.me) setLocalBest(lv.id, s.me.score, s.me.best_ms, s.me.rank);
-    });
-  }catch(e){ /* hors ligne : on garde le dernier etat connu */ }
-  renderLevelList();
 }
 
 /* =====================================================================
@@ -889,8 +885,16 @@ async function finish(){
     document.getElementById('subState').innerHTML=
       `${t('yourRecord')} : <b style="color:var(--green-l)">${r.best}</b> · ${r.players} ${t('players')}`;
     setLocalBest(mode, r.best, r.best_ms, r.rank);
+
+    // Record battu : on met a jour le cache avec ce que la reponse contient
+    // deja, sans second appel. Si le joueur passe 1er, il devient le champion.
+    const s = SUMMARIES[mode] || {players:0, top:null, me:null};
+    s.me = {name:player.name, score:r.best, best_ms:r.best_ms, rank:r.rank};
+    s.players = r.players;
+    if(r.rank === 1) s.top = {name:player.name, score:r.best, best_ms:r.best_ms};
+    SUMMARIES[mode] = s; saveSummaries(); renderLevelList();
+
     addShareButton(r, stats);
-    loadSummaries(); // le classement a bouge, on rafraichit les 3 lignes
   }catch(e){
     document.getElementById('rankVal').textContent='—';
     document.getElementById('subState').textContent=t('sendFail');
@@ -936,6 +940,9 @@ async function loadBoard(){
     }
     list.innerHTML=html;
 
+    // Consultation du classement = seul moment ou le cache se rafraichit.
+    SUMMARIES[boardMode] = {players:b.players, top:rows[0] || null, me:b.me || null};
+    saveSummaries();
     if(b.me) setLocalBest(boardMode, b.me.score, b.me.best_ms, b.me.rank);
     st.textContent = rows.length ? '' : t('noScores');
   }catch(e){
@@ -1012,8 +1019,11 @@ function boot(){
   document.getElementById('name').value = player.fromTelegram ? '' : player.name;
   setLang(lang);
   renderWalletStatus(); renderLevelList(); renderLegend();
+  // Aucun appel au classement ici : les lignes sous les niveaux viennent du
+  // cache local. Elles ne se rafraichissent qu'a l'ouverture du classement
+  // general ou apres un record. detectHolder() interroge check-franc, pas
+  // Supabase, et reste necessaire pour deverrouiller le niveau Difficile.
   detectHolder();
-  loadSummaries();
 }
 boot();
 </script>
