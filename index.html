@@ -156,6 +156,8 @@ body.playing #screenGame.card{
 .score-row .who{flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
 .score-row .val{font-family:'Bangers',cursive; letter-spacing:1px; color:var(--green-l); font-size:16px}
 .score-row .meta{font-size:10px; color:var(--muted); width:52px; text-align:right; flex:0 0 auto}
+.score-gap{text-align:center; color:var(--muted); font-size:18px; letter-spacing:4px;
+  padding:2px 0 4px; opacity:.7}
 .no-scores{text-align:center; color:var(--muted); font-size:12px; padding:8px; line-height:1.6}
 
 .tabs{display:flex; gap:6px; margin-bottom:12px}
@@ -410,6 +412,8 @@ const I18N = {
     boardTitle:'CLASSEMENT GENERAL', boardSub:'Un classement par niveau, depuis le debut',
     top:'🏆 TOP 10', retour:'Retour', menu:'Menu',
     you:'Toi', notPlayed:'Pas encore joue', champion:'Champion',
+    newRecord:'NOUVEAU RECORD !', noRecord:'Record non battu, rien n\'est envoye.',
+    yourRecord:'Ton record',
     yourBest:'Ton meilleur', ptsShort:'pts', playersTotal:'joueur(s) classe(s)',
     lvl:['Facile','Moyen','Difficile'],
     lvlMeta:['Ouvert a tous','Reserve aux hodlers $FRANC','Reserve aux hodlers $FRANC'],
@@ -435,6 +439,8 @@ const I18N = {
     boardTitle:'ALL-TIME LEADERBOARD', boardSub:'One leaderboard per level, since day one',
     top:'🏆 TOP 10', retour:'Back', menu:'Menu',
     you:'You', notPlayed:'Not played yet', champion:'Champion',
+    newRecord:'NEW RECORD !', noRecord:'Record not beaten, nothing sent.',
+    yourRecord:'Your record',
     yourBest:'Your best', ptsShort:'pts', playersTotal:'ranked player(s)',
     lvl:['Easy','Medium','Hard'],
     lvlMeta:['Open to everyone','$FRANC hodlers only','$FRANC hodlers only'],
@@ -541,8 +547,31 @@ const submitScore = (stats,mode) => rpc('submit_reflex_score',{
   p_hits:stats.hits, p_misses:stats.misses, p_best_ms:stats.bestMs,
   p_avg_ms:stats.avgMs, p_mode:mode
 });
-const fetchBoard = (mode) => rpc('reflex_leaderboard',{p_mode:mode, p_limit:10, p_player_id:player.id});
-const fetchSummary = (mode) => rpc('reflex_summary',{p_mode:mode, p_player_id:player.id});
+/* Un seul appel pour la page classement (TOP N + la ligne du joueur), et un
+   seul pour les 3 niveaux au demarrage. */
+const fetchBoard = (mode) => rpc('reflex_board',{p_mode:mode, p_limit:10, p_player_id:player.id});
+const fetchHome  = ()     => rpc('reflex_home',{p_player_id:player.id});
+
+/* ---------- Record local ----------
+   On n'ecrit dans Supabase que si la partie bat le record du joueur. Le record
+   connu est garde en localStorage, donc une partie ordinaire ne declenche
+   AUCUN appel reseau. Le serveur reverifie de son cote (upsert conditionnel) :
+   un localStorage vide ou un autre appareil ne peut pas ecraser un meilleur
+   score par erreur. */
+const bestKey = (mode) => 'flcr_best_' + mode;
+function localBest(mode){
+  try{ return JSON.parse(localStorage.getItem(bestKey(mode))) || null; }catch(e){ return null; }
+}
+function setLocalBest(mode, score, ms, rank){
+  localStorage.setItem(bestKey(mode), JSON.stringify({score, ms, rank}));
+}
+/* Meme regle que le classement : score superieur, ou score egal plus rapide. */
+function isRecord(mode, score, ms){
+  const b = localBest(mode);
+  if(!b) return true;
+  if(score > b.score) return true;
+  return score === b.score && ms != null && (b.ms == null || ms < b.ms);
+}
 
 /* Resume d'un niveau : le champion en medaille or, puis le meilleur du joueur
    et son rang. Alimente la ligne sous chaque mode et l'entete du classement. */
@@ -555,10 +584,16 @@ function summaryLine(s){
     : `<span class="sum-me none">${t('notPlayed')}</span>`;
   return `<span class="sum">${top}${me}</span>`;
 }
+/* Un appel, les 3 niveaux. Resynchronise au passage le record local. */
 async function loadSummaries(){
-  await Promise.all(LEVELS.map(async lv=>{
-    try{ SUMMARIES[lv.id]=await fetchSummary(lv.id); }catch(e){ SUMMARIES[lv.id]=null; }
-  }));
+  try{
+    const home = await fetchHome();
+    LEVELS.forEach(lv=>{
+      const s = home?.[lv.id] || null;
+      SUMMARIES[lv.id] = s;
+      if(s?.me) setLocalBest(lv.id, s.me.score, s.me.best_ms, s.me.rank);
+    });
+  }catch(e){ /* hors ligne : on garde le dernier etat connu */ }
   renderLevelList();
 }
 
@@ -818,10 +853,12 @@ async function finish(){
     avgMs:  G.times.length ? Math.round(G.times.reduce((a,b)=>a+b,0)/G.times.length) : null,
   };
   const mode=LEVELS[G.level].id;
+  const record=isRecord(mode, stats.score, stats.bestMs);
+  const known=localBest(mode);
 
   openModal({
     img: stats.score>0 ? 'assets/francis-happy.webp' : 'assets/francis-sad.webp',
-    title: t('over'),
+    title: record ? t('newRecord') : t('over'),
     text: '',
     extra:`<div class="stat-grid">
         <div><span>${t('pts')}</span><b class="gold">${stats.score}</b></div>
@@ -829,21 +866,31 @@ async function finish(){
         <div><span>${t('missCnt')}</span><b>${stats.misses}</b></div>
         <div><span>${t('best')}</span><b>${stats.bestMs ?? '—'}</b></div>
         <div><span>${t('avg')}</span><b>${stats.avgMs ?? '—'}</b></div>
-        <div><span>${t('rank')}</span><b class="gold" id="rankVal">…</b></div>
+        <div><span>${t('rank')}</span><b class="gold" id="rankVal">${
+          record ? '…' : (known?.rank ? '#'+known.rank : '—')}</b></div>
       </div>
-      <p id="subState">${t('sending')}</p>`,
+      <p id="subState">${record ? t('sending') : t('noRecord')}</p>`,
     btn1:t('replay'), btn2:t('backMenu'),
     a1:()=>startGame(G.level),
     a2:()=>{ closeModal(); boardMode=mode; openBoard(); },
   });
 
+  // Pas de record = pas d'appel Supabase. Le classement bougera au prochain
+  // demarrage de l'application.
+  if(!record){
+    if(known) document.getElementById('subState').innerHTML=
+      `${t('yourRecord')} : <b style="color:var(--green-l)">${known.score}</b>`;
+    return;
+  }
+
   try{
     const r=await submitScore(stats, mode);
     document.getElementById('rankVal').textContent='#'+r.rank;
     document.getElementById('subState').innerHTML=
-      `${t('bestToday')} : <b style="color:var(--green-l)">${r.best}</b> · ${r.players} ${t('players')}`;
+      `${t('yourRecord')} : <b style="color:var(--green-l)">${r.best}</b> · ${r.players} ${t('players')}`;
+    setLocalBest(mode, r.best, r.best_ms, r.rank);
     addShareButton(r, stats);
-    loadSummaries(); // le classement general a bouge, on rafraichit les 3 lignes
+    loadSummaries(); // le classement a bouge, on rafraichit les 3 lignes
   }catch(e){
     document.getElementById('rankVal').textContent='—';
     document.getElementById('subState').textContent=t('sendFail');
@@ -874,27 +921,42 @@ async function loadBoard(){
         sum=document.getElementById('boardSummary');
   list.innerHTML=''; st.textContent=t('loading');
 
-  // L'entete (champion + rang du joueur) se charge en parallele du TOP 10.
-  fetchSummary(boardMode)
-    .then(s=>{ SUMMARIES[boardMode]=s; sum.innerHTML=boardSummaryHtml(s); })
-    .catch(()=>{ sum.innerHTML=''; });
-
   try{
-    const rows=await fetchBoard(boardMode);
-    list.innerHTML=rows.map(r=>`
-      <div class="score-row r${r.rank} ${r.is_me?'me':''}">
-        <span class="rank">${r.rank===1?'🥇':r.rank===2?'🥈':r.rank===3?'🥉':'#'+r.rank}</span>
-        <span class="who">${esc(r.player_name)}</span>
-        <span class="val">${r.score}</span>
-        <span class="meta">${r.best_ms ?? '—'} ms</span>
-      </div>`).join('');
+    // Un seul appel : le TOP 10 et la ligne du joueur arrivent ensemble.
+    const b=await fetchBoard(boardMode);
+    const rows=b.top || [];
+    sum.innerHTML=boardSummaryHtml(b);
+
+    let html=rows.map(r=>scoreRow(r, r.is_me)).join('');
+
+    // Joueur hors du TOP : petits points, puis sa ligne juste en dessous.
+    const inTop = rows.some(r=>r.is_me);
+    if(b.me && !inTop){
+      html += `<div class="score-gap">⋯</div>` + scoreRow(b.me, true);
+    }
+    list.innerHTML=html;
+
+    if(b.me) setLocalBest(boardMode, b.me.score, b.me.best_ms, b.me.rank);
     st.textContent = rows.length ? '' : t('noScores');
   }catch(e){
+    sum.innerHTML='';
     st.textContent=t('boardFail');
   }
 }
+function scoreRow(r, isMe){
+  const medal = r.rank===1?'🥇' : r.rank===2?'🥈' : r.rank===3?'🥉' : '#'+r.rank;
+  return `<div class="score-row r${r.rank} ${isMe?'me':''}">
+      <span class="rank">${medal}</span>
+      <span class="who">${esc(r.name)}</span>
+      <span class="val">${r.score}</span>
+      <span class="meta">${r.best_ms ?? '—'} ms</span>
+    </div>`;
+}
+/* Accepte les deux formes : reflex_board (top = tableau) et reflex_home
+   (top = le champion seul). */
 function boardSummaryHtml(s){
-  if(!s || !s.top) return `<div class="sum-empty">${t('noScores')}</div>`;
+  const champ = Array.isArray(s?.top) ? s.top[0] : s?.top;
+  if(!champ) return `<div class="sum-empty">${t('noScores')}</div>`;
   const me = s.me
     ? `<div class="sum-card me"><span class="cap">${t('yourBest')}</span>
          <b>#${s.me.rank}</b><span class="pt">${s.me.score} ${t('ptsShort')}</span>
@@ -902,8 +964,8 @@ function boardSummaryHtml(s){
     : `<div class="sum-card me none"><span class="cap">${t('yourBest')}</span>
          <b>—</b><span class="pt">${t('notPlayed')}</span></div>`;
   return `<div class="sum-card top"><span class="cap">🥇 ${t('champion')}</span>
-      <b>${esc(s.top.name)}</b><span class="pt">${s.top.score} ${t('ptsShort')}</span>
-      <span class="ms">${s.top.best_ms ?? '—'} ms</span></div>${me}
+      <b>${esc(champ.name)}</b><span class="pt">${champ.score} ${t('ptsShort')}</span>
+      <span class="ms">${champ.best_ms ?? '—'} ms</span></div>${me}
     <div class="sum-players">${s.players} ${t('playersTotal')}</div>`;
 }
 

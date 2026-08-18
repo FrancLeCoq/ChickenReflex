@@ -50,7 +50,7 @@ Comme dans **Mastermind**, les niveaux verrouillés s'ouvrent en connectant un w
 
 ## 🏆 Classements généraux
 
-**Trois classements généraux**, un par niveau, calculés sur **tout l'historique** (pas de remise à zéro). Chacun retient le **meilleur score par joueur**, départagé au **meilleur temps de réaction** — à score égal, le plus rapide passe devant.
+**Trois classements généraux**, un par niveau, sans remise à zéro. Chacun retient le **meilleur score par joueur**, départagé au **meilleur temps de réaction** — à score égal, le plus rapide passe devant.
 
 Sous chaque niveau, et en tête du classement, s'affichent **le champion avec sa médaille d'or** puis **le meilleur score du joueur avec son rang** :
 
@@ -58,13 +58,25 @@ Sous chaque niveau, et en tête du classement, s'affichent **le champion avec sa
 🥇 Benoit 87     Toi #4 — 51
 ```
 
-Chaque partie est **archivée** avec sa date (colonne `day`, en heure de Paris) : le jour où le jeu tourne bien, un classement quotidien se rebranche sans aucune migration de données.
+Si le joueur est **hors du TOP 10**, sa ligne apparaît quand même, séparée par des points de suspension :
+
+```
+#10  Joueur10   30
+      ⋯
+#23  Toi        14
+```
+
+### Une seule ligne par joueur, écrite seulement sur record
+
+La base ne garde **que le meilleur score de chaque joueur par niveau** — contrainte d'unicité sur `(player_id, mode)`. Une partie qui ne bat pas le record **ne déclenche aucun appel réseau** : le client connaît son record (localStorage) et ne parle à Supabase que s'il le dépasse. Les classements se rafraîchissent au démarrage de l'application.
+
+Le serveur revérifie de son côté avec un **upsert conditionnel** : un `localStorage` vidé ou un autre appareil ne peut pas écraser un meilleur score par erreur. Même règle que le classement — on écrase si le score est supérieur, ou égal avec un meilleur temps de réaction.
 
 Trois fonctions Postgres, appelées directement en RPC (aucun SDK à embarquer) :
 
-- `submit_reflex_score(...)` — enregistre une partie et renvoie `{rank, best, best_ms, players}`
-- `reflex_leaderboard(mode, limit, player_id)` — le TOP 10 du niveau, avec un `is_me` pour se surligner
-- `reflex_summary(mode, player_id)` — le champion + le meilleur du joueur et son rang
+- `submit_reflex_score(...)` — upsert conditionnel, renvoie `{improved, rank, best, best_ms, players}`
+- `reflex_board(mode, limit, player_id)` — TOP N **+ la ligne du joueur**, en un seul appel
+- `reflex_home(player_id)` — les **3 niveaux d'un coup** (champion + place du joueur) au démarrage
 
 La table `reflex_scores` est **fermée par RLS** et `REVOKE` : le rôle `anon` ne peut pas la lire ni y écrire en direct. Tout passe par ces deux fonctions `SECURITY DEFINER`, qui valident les entrées :
 
