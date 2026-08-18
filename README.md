@@ -9,7 +9,7 @@ Mini-jeu de **réflexes de 30 secondes** aux couleurs de **Le Coq Francis**, jou
 
 ## 🎮 Le jeu en bref
 
-Une cible apparaît au centre. **Tape le plus vite possible** — sauf si c'est un renard.
+Une cible apparaît dans l'aire de jeu. **Tape le plus vite possible** — sauf si c'est un renard.
 
 | Cible | Points |
 |-------|:------:|
@@ -32,11 +32,13 @@ Le **temps de réaction est mesuré en millisecondes**, à partir de la frame r�
 
 ### Les 3 niveaux
 
-| Niveau | Affichage | Temps mort | Renards | Accès |
-|--------|:---------:|:----------:|:-------:|-------|
-| ⭐ **Facile** | 1,10 s | 430 ms | rares | **Tous** |
-| ⭐⭐ **Moyen** | 0,82 s | 310 ms | fréquents | **Tous** |
-| ⭐⭐⭐ **Difficile** | 0,62 s | 215 ms | fréquents + œufs piégés | **Hodlers $FRANC** |
+| Niveau | Affichage | Temps mort | Cible | Renards | Accès |
+|--------|:---------:|:----------:|-------|:-------:|-------|
+| ⭐ **Facile** | 1,10 s | 430 ms | centrée, taille max | rares | **Tous** |
+| ⭐⭐ **Moyen** | 0,82 s | 310 ms | **position aléatoire** | fréquents | **Tous** |
+| ⭐⭐⭐ **Difficile** | 0,62 s | 215 ms | **position + taille aléatoires** | fréquents + œufs piégés | **Hodlers $FRANC** |
+
+En Moyen la cible surgit n'importe où dans l'aire de jeu : il faut la **trouver** avant de réagir. En Difficile sa taille varie aussi — la taille actuelle (200 px) est le **maximum**, jamais dépassé, et une petite cible est plus dure à identifier vite. Le « TAPE ! » reste ancré en bas pour ne pas sauter d'un affichage à l'autre.
 
 Dans chaque partie, le rythme **s'accélère progressivement** (jusqu'à −22 % sur les 30 s) et les **6 dernières secondes** doublent la fréquence des renards. Chaque niveau a son propre classement général.
 
@@ -52,11 +54,15 @@ Dans chaque partie, le rythme **s'accélère progressivement** (jusqu'à −22 %
 
 **Trois classements généraux**, un par niveau, sans remise à zéro. Chacun retient le **meilleur score par joueur**, départagé au **meilleur temps de réaction** — à score égal, le plus rapide passe devant.
 
-Sous chaque niveau, et en tête du classement, s'affichent **le champion avec sa médaille d'or** puis **le meilleur score du joueur avec son rang** :
+Sous chaque niveau s'affiche **le champion** — son nom, son meilleur score et son meilleur temps :
 
 ```
-🥇 Benoit 87     Toi #4 — 51
+🥇 FrancisLeCoq
+Meilleur score : 20 points
+Meilleur temps de réaction : 220 ms
 ```
+
+En fin de partie, la modale montre **la partie qui vient de finir** (points, touches, meilleur temps), **rappelle la meilleure performance** pour comparer, et renvoie vers le classement mondial par un bouton placé entre *Rejouer* et *Retour au menu*.
 
 Si le joueur est **hors du TOP 10**, sa ligne apparaît quand même, séparée par des points de suspension :
 

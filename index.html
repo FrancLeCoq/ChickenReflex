@@ -117,16 +117,17 @@ body.playing #screenGame.card{
 .lvl-btn.unlocked{border-color:rgba(34,197,94,0.7); background:linear-gradient(135deg,rgba(22,163,74,0.30),rgba(21,128,61,0.30))}
 .lvl-btn.lockedb{border-color:rgba(217,119,6,0.7); background:linear-gradient(135deg,rgba(217,119,6,0.22),rgba(180,83,9,0.22))}
 .lvl-btn .lk{font-size:18px; display:flex; align-items:center; flex:0 0 auto}
-.lvl-btn .ll{display:flex; flex-direction:column; align-items:flex-start; gap:2px}
+.lvl-btn .ll{display:flex; flex-direction:column; align-items:flex-start; text-align:left;
+  gap:2px; flex:1; min-width:0}
 .lvl-btn .stars{font-size:13px}
 .lvl-btn .meta-mini{font-size:10px; color:var(--muted)}
 
-/* Resume sous chaque niveau : champion + meilleur du joueur */
-.sum{display:flex; flex-wrap:wrap; gap:4px 10px; margin-top:5px; font-size:11px}
-.sum-top{color:var(--gold)}
-.sum-top b, .sum-me b{font-family:'Bangers',cursive; font-size:14px; letter-spacing:1px}
-.sum-me{color:var(--green-l)}
-.sum-me.none{color:var(--muted); opacity:.8}
+/* Resume sous chaque niveau : le champion, son score et son temps */
+.sum{display:flex; flex-direction:column; align-items:flex-start; text-align:left;
+  gap:1px; margin-top:6px; font-size:11px}
+.sum-name{color:var(--gold); font-size:13px}
+.sum-stat{color:var(--muted); font-size:10.5px}
+.sum-stat b{color:var(--green-l); font-family:'Bangers',cursive; font-size:13px; letter-spacing:1px}
 .sum.empty, .sum-empty{color:var(--muted); font-size:11px; opacity:.85}
 
 /* Entete du classement */
@@ -188,11 +189,14 @@ body.playing #screenGame.card{
 #stage.live{border-style:solid; border-color:rgba(34,197,94,0.65); background:radial-gradient(circle at 50% 45%,rgba(22,163,74,0.22),transparent 65%)}
 #stage.trap{border-color:rgba(239,68,68,0.8); background:radial-gradient(circle at 50% 45%,rgba(239,68,68,0.25),transparent 65%)}
 
-.sprite-wrap{position:relative; width:200px; height:200px; display:flex; align-items:center; justify-content:center}
+/* La cible est posee en absolu : Facile la centre, Moyen et Difficile la
+   deplacent, Difficile fait aussi varier sa taille (200px = maximum). */
+.sprite-wrap{position:absolute; width:200px; height:200px;
+  display:flex; align-items:center; justify-content:center}
 .sp{display:none; max-width:100%; max-height:100%; object-fit:contain;
   filter:drop-shadow(0 8px 20px rgba(0,0,0,0.55)); pointer-events:none}
 .sp.on{display:block; animation:pop .13s ease-out}
-.sp.emoji{font-size:120px; line-height:1; align-items:center; justify-content:center}
+.sp.emoji{line-height:1; align-items:center; justify-content:center}
 .sp.emoji.on{display:flex}
 @keyframes pop{from{transform:scale(0.72)}to{transform:scale(1)}}
 
@@ -202,7 +206,8 @@ body.playing #screenGame.card{
   color:var(--gold); display:none; pointer-events:none}
 .tgt-val.on{display:block}
 
-#hint{font-family:'Bangers',cursive; font-size:30px; letter-spacing:3px; min-height:38px; margin-top:4px}
+#hint{position:absolute; left:0; right:0; bottom:10px; text-align:center;
+  font-family:'Bangers',cursive; font-size:30px; letter-spacing:3px; min-height:38px}
 #hint.go{color:var(--green-l)}
 #hint.no{color:#fca5a5}
 #flash{position:absolute; top:44%; left:0; right:0; text-align:center;
@@ -229,11 +234,19 @@ body.playing #screenGame.card{
 .modal img{width:92px; height:92px; object-fit:contain; margin-bottom:6px; filter:drop-shadow(0 6px 16px rgba(0,0,0,.6))}
 .modal h3{font-family:'Bangers',cursive; font-size:26px; letter-spacing:2px; color:var(--gold); margin-bottom:6px}
 .modal p{font-size:12px; color:var(--muted); line-height:1.7; margin-bottom:14px}
-.stat-grid{display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin:12px 0 14px}
+.stat-grid{display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin:12px 0 10px}
 .stat-grid > div{background:rgba(255,255,255,0.05); border-radius:11px; padding:9px 4px}
 .stat-grid span{display:block; font-size:9px; color:var(--muted); letter-spacing:.5px}
 .stat-grid b{display:block; font-family:'Bangers',cursive; font-size:20px; letter-spacing:1px; margin-top:2px}
 .stat-grid b.gold{color:var(--gold)}
+.prev-best{display:flex; flex-direction:column; gap:1px; margin:2px 0 10px;
+  background:rgba(255,255,255,0.05); border:1px solid rgba(168,85,247,0.25);
+  border-radius:12px; padding:9px 10px}
+.prev-best .pb-cap{font-size:9px; color:var(--muted); letter-spacing:.5px}
+.prev-best .pb-val{font-size:12px}
+.prev-best .pb-val b{font-family:'Bangers',cursive; font-size:18px; letter-spacing:1px; color:var(--green-l)}
+.prev-best .pb-none{font-size:11px; color:var(--muted)}
+.modal .invite{font-size:11px; color:var(--muted); line-height:1.5; margin-bottom:14px}
 .name-row{display:flex; gap:8px; margin-bottom:14px}
 .name-row input{flex:1; padding:11px 12px; border-radius:11px; border:1px solid rgba(168,85,247,0.4);
   background:rgba(255,255,255,0.07); color:#fff; font-family:'Fredoka One',cursive; font-size:13px; -webkit-user-select:text; user-select:text}
@@ -317,7 +330,7 @@ body.playing #screenGame.card{
 
     <div id="stage">
       <span class="tgt-val" id="tgtVal"></span>
-      <div class="sprite-wrap">
+      <div class="sprite-wrap" id="spriteWrap">
         <img class="sp" id="sp-francis" src="assets/francis-default.webp" alt="Francis">
         <img class="sp" id="sp-valet"   src="assets/valet.webp"           alt="Valet">
         <img class="sp" id="sp-reine"   src="assets/reine.webp"           alt="Reine">
@@ -341,6 +354,7 @@ body.playing #screenGame.card{
     <p id="modalText"></p>
     <div id="modalExtra"></div>
     <button class="menu-btn btn-purple" style="margin-bottom:8px" id="modalBtn1" onclick="modalAction1()"></button>
+    <button class="menu-btn btn-comp-orange" style="margin-bottom:8px" id="modalBtnMid" onclick="modalActionMid()"></button>
     <button class="menu-btn btn-neutral" id="modalBtn2" onclick="modalAction2()"></button>
   </div>
 </div>
@@ -395,10 +409,13 @@ const TARGETS = {
    window = temps d'affichage, gap = temps mort. Seul Difficile est holderOnly. */
 const LEVELS = [
   {id:'easy',   stars:'⭐',              holderOnly:false, window:1100, gap:430,
+   randomPos:false, minScale:1,
    weights:{egg:14,corn:13,worm:13,coin:12,francis:24,valet:12,reine:6,roi:2,fox:4,bomb:0}},
   {id:'medium', stars:'⭐⭐',        holderOnly:false,  window:820,  gap:310,
+   randomPos:true,  minScale:1,
    weights:{egg:10,corn:10,worm:10,coin:10,francis:22,valet:14,reine:8,roi:3,fox:13,bomb:0}},
   {id:'hard',   stars:'⭐⭐⭐',  holderOnly:true,  window:620,  gap:215,
+   randomPos:true,  minScale:0.45,
    weights:{egg:8,corn:8,worm:8,coin:8,francis:20,valet:14,reine:9,roi:4,fox:16,bomb:5}},
 ];
 
@@ -412,6 +429,12 @@ const I18N = {
     boardTitle:'CLASSEMENT GENERAL', boardSub:'Un classement par niveau, depuis le debut',
     top:'🏆 TOP 10', retour:'Retour', menu:'Menu',
     you:'Toi', notPlayed:'Pas encore joue', champion:'Champion',
+    bestScore:'Meilleur score', bestTime:'Meilleur temps de reaction', points:'points',
+    yourBestRun:'Ta meilleure performance', beaten:'Ancienne meilleure performance',
+    bestTimeShort:'MEILLEUR TEMPS',
+    firstRun:'Premiere partie sur ce niveau !',
+    goSeeBoard:'Ton classement mondial t\'attend dans la rubrique Classement.',
+    worldBoard:'🏆 CLASSEMENT MONDIAL',
     newRecord:'NOUVEAU RECORD !', noRecord:'Record non battu, rien n\'est envoye.',
     yourRecord:'Ton record',
     yourBest:'Ton meilleur', ptsShort:'pts', playersTotal:'joueur(s) classe(s)',
@@ -440,6 +463,12 @@ const I18N = {
     boardTitle:'ALL-TIME LEADERBOARD', boardSub:'One leaderboard per level, since day one',
     top:'🏆 TOP 10', retour:'Back', menu:'Menu',
     you:'You', notPlayed:'Not played yet', champion:'Champion',
+    bestScore:'Best score', bestTime:'Best reaction time', points:'points',
+    yourBestRun:'Your best run', beaten:'Previous best run',
+    bestTimeShort:'BEST TIME',
+    firstRun:'First run on this level !',
+    goSeeBoard:'Your world ranking is waiting in the Leaderboard section.',
+    worldBoard:'🏆 WORLD LEADERBOARD',
     newRecord:'NEW RECORD !', noRecord:'Record not beaten, nothing sent.',
     yourRecord:'Your record',
     yourBest:'Your best', ptsShort:'pts', playersTotal:'ranked player(s)',
@@ -588,15 +617,17 @@ let SUMMARIES = (() => {
 function saveSummaries(){
   localStorage.setItem(SUM_KEY, JSON.stringify(SUMMARIES));
 }
+/* Sous chaque niveau : uniquement le champion — son nom, son meilleur score
+   et son meilleur temps de reaction. */
 function summaryLine(s){
   // Jamais consulte : on n'affiche rien plutot que d'inventer un classement vide.
   if(!s) return '';
   if(!s.top) return `<span class="sum empty">${t('noScores')}</span>`;
-  const top = `<span class="sum-top">🥇 ${esc(s.top.name)} <b>${s.top.score}</b></span>`;
-  const me  = s.me
-    ? `<span class="sum-me">${t('you')} <b>#${s.me.rank}</b> — ${s.me.score}</span>`
-    : `<span class="sum-me none">${t('notPlayed')}</span>`;
-  return `<span class="sum">${top}${me}</span>`;
+  return `<span class="sum">
+      <span class="sum-name">🥇 ${esc(s.top.name)}</span>
+      <span class="sum-stat">${t('bestScore')} : <b>${s.top.score}</b> ${t('points')}</span>
+      <span class="sum-stat">${t('bestTime')} : <b>${s.top.best_ms ?? '—'}</b> ms</span>
+    </span>`;
 }
 
 /* =====================================================================
@@ -673,7 +704,7 @@ function renderLegend(){
    MOTEUR DU JEU
    ===================================================================== */
 const el={};
-['stage','hint','flash','score','time','reaction','lvlBadge','sp-emoji','badgeBomb','tgtVal']
+['stage','hint','flash','score','time','reaction','lvlBadge','sp-emoji','badgeBomb','tgtVal','spriteWrap']
   .forEach(id=>el[id]=document.getElementById(id));
 
 const G={
@@ -703,6 +734,33 @@ function clearSprites(){
   el.tgtVal.classList.remove('on');
 }
 
+/* Place la cible dans l'aire de jeu.
+   Facile la garde au centre, Moyen la deplace au hasard, Difficile la deplace
+   ET fait varier sa taille — 200 px reste le maximum, jamais plus. */
+const SPRITE_MAX = 200;
+function placeSprite(lv){
+  const wrap = el.spriteWrap;
+  const box  = el.stage.getBoundingClientRect();
+  const size = Math.round(SPRITE_MAX * (lv.minScale + Math.random()*(1-lv.minScale)));
+
+  wrap.style.width = wrap.style.height = size+'px';
+  el['sp-emoji'].style.fontSize = Math.round(size*0.6)+'px';
+
+  const padX = 10;
+  const padTop = 10;
+  const padBottom = 54; // on laisse la place au TAPE! / NE TAPE PAS! ancre en bas
+  const freeX = Math.max(0, box.width  - size - padX*2);
+  const freeY = Math.max(0, box.height - size - padTop - padBottom);
+
+  if(lv.randomPos){
+    wrap.style.left = (padX + Math.random()*freeX)+'px';
+    wrap.style.top  = (padTop + Math.random()*freeY)+'px';
+  } else {
+    wrap.style.left = (padX + freeX/2)+'px';
+    wrap.style.top  = (padTop + freeY/2)+'px';
+  }
+}
+
 function spawn(){
   if(G.state!=='running') return;
   const lv=LEVELS[G.level];
@@ -713,6 +771,7 @@ function spawn(){
 
   G.current=tgt; G.penalised=false;
 
+  placeSprite(lv);
   clearSprites();
   if(tgt.kind==='img'){
     document.getElementById(tgt.el).classList.add('on');
@@ -857,43 +916,32 @@ async function finish(){
     img: stats.score>0 ? 'assets/francis-happy.webp' : 'assets/francis-sad.webp',
     title: record ? t('newRecord') : t('over'),
     text: '',
+    // La partie qui vient de finir : points, touches, temps. Rien d'autre.
     extra:`<div class="stat-grid">
         <div><span>${t('pts')}</span><b class="gold">${stats.score}</b></div>
         <div><span>${t('hits')}</span><b>${stats.hits}</b></div>
-        <div><span>${t('missCnt')}</span><b>${stats.misses}</b></div>
-        <div><span>${t('best')}</span><b>${stats.bestMs ?? '—'}</b></div>
-        <div><span>${t('avg')}</span><b>${stats.avgMs ?? '—'}</b></div>
-        <div><span>${t('rank')}</span><b class="gold" id="rankVal">${
-          record ? '…' : (known?.rank ? '#'+known.rank : '—')}</b></div>
+        <div><span>${t('bestTimeShort')}</span><b>${stats.bestMs ?? '—'} ms</b></div>
       </div>
-      <p id="subState">${!canSubmit() ? t('tgOnly') : (record ? t('sending') : t('noRecord'))}</p>`,
-    btn1:t('replay'), btn2:t('backMenu'),
+      <div class="prev-best">${prevBestHtml(known, record)}</div>
+      <p class="invite">${canSubmit() ? t('goSeeBoard') : t('tgOnly')}</p>`,
+    btn1:t('replay'), btnMid:t('worldBoard'), btn2:t('backMenu'),
     a1:()=>startGame(G.level),
-    a2:()=>{ closeModal(); boardMode=mode; openBoard(); },
+    aMid:()=>{ closeModal(); boardMode=mode; openBoard(); },
+    a2:()=>{ closeModal(); show('screenMenu'); },
   });
 
-  // Pas de record = pas d'appel Supabase. Le classement bougera au prochain
-  // demarrage de l'application.
-  if(!record){
-    if(known) document.getElementById('subState').innerHTML=
-      `${t('yourRecord')} : <b style="color:var(--green-l)">${known.score}</b>`;
-    return;
-  }
+  // Pas de record = pas d'appel Supabase.
+  if(!record) return;
 
   // Hors Telegram : aucune identite signee, donc pas d'entree au classement.
   // On garde quand meme le record en local pour que le jeu reste coherent.
   if(!canSubmit()){
     setLocalBest(mode, stats.score, stats.bestMs, null);
-    document.getElementById('rankVal').textContent='—';
-    document.getElementById('subState').textContent=t('tgOnly');
-    return;
+    return; // le message "reserve a Telegram" est deja dans la modale
   }
 
   try{
     const r=await submitScore(stats, mode);
-    document.getElementById('rankVal').textContent='#'+r.rank;
-    document.getElementById('subState').innerHTML=
-      `${t('yourRecord')} : <b style="color:var(--green-l)">${r.best}</b> · ${r.players} ${t('players')}`;
     setLocalBest(mode, r.best, r.best_ms, r.rank);
 
     // Record battu : on met a jour le cache avec ce que la reponse contient
@@ -906,9 +954,17 @@ async function finish(){
 
     addShareButton(r, stats);
   }catch(e){
-    document.getElementById('rankVal').textContent='—';
-    document.getElementById('subState').textContent=t('sendFail');
+    const p=document.querySelector('#modalExtra .invite');
+    if(p){ p.textContent=t('sendFail'); p.style.color='#fca5a5'; }
   }
+}
+
+/* Rappel de la meilleure performance, pour comparer avec la partie qui vient
+   de finir. Sur un record, on montre ce qui vient d'etre battu. */
+function prevBestHtml(known, record){
+  if(!known) return `<span class="pb-none">${t('firstRun')}</span>`;
+  return `<span class="pb-cap">${record ? t('beaten') : t('yourBestRun')}</span>
+    <span class="pb-val"><b>${known.score}</b> ${t('points')} · <b>${known.ms ?? '—'}</b> ms</span>`;
 }
 
 function addShareButton(r, stats){
@@ -952,7 +1008,7 @@ async function loadBoard(){
 
     // Consultation du classement = seul moment ou le cache se rafraichit.
     SUMMARIES[boardMode] = {players:b.players, top:rows[0] || null, me:b.me || null};
-    saveSummaries();
+    saveSummaries(); renderLevelList();
     if(b.me) setLocalBest(boardMode, b.me.score, b.me.best_ms, b.me.rank);
     st.textContent = rows.length ? '' : t('noScores');
   }catch(e){
@@ -991,8 +1047,8 @@ function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;',
 /* =====================================================================
    MODAL
    ===================================================================== */
-let mA1=null, mA2=null;
-function openModal({img,title,text,extra,btn1,btn2,a1,a2}){
+let mA1=null, mA2=null, mAM=null;
+function openModal({img,title,text,extra,btn1,btn2,btnMid,a1,a2,aMid}){
   const bg=document.getElementById('modalBg');
   const im=document.getElementById('modalImg');
   if(img){ im.src=img; im.style.display='block'; } else { im.style.display='none'; }
@@ -1002,12 +1058,17 @@ function openModal({img,title,text,extra,btn1,btn2,a1,a2}){
   document.getElementById('modalExtra').innerHTML=extra||'';
   document.getElementById('modalBtn1').textContent=btn1;
   document.getElementById('modalBtn2').textContent=btn2;
+  const mid=document.getElementById('modalBtnMid');
+  mid.textContent=btnMid||'';
+  mid.style.display=btnMid?'flex':'none';
+  mAM=aMid;
   mA1=a1; mA2=a2;
   bg.classList.add('on');
 }
 function closeModal(){ document.getElementById('modalBg').classList.remove('on'); }
 function modalAction1(){ if(mA1) mA1(); }
 function modalAction2(){ if(mA2) mA2(); }
+function modalActionMid(){ if(mAM) mAM(); }
 
 function showLockModal(){
   openModal({
