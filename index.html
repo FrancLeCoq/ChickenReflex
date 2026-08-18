@@ -351,9 +351,9 @@ body.playing #screenGame.card{
    ===================================================================== */
 const WALLET_PAGE = 'https://franclecoq.github.io/Wallet/connect-wallet.html';
 const BACKEND     = 'https://mubqtnqulpyehkgubhnh.supabase.co/functions/v1';
-const SUPA_URL    = 'https://mubqtnqulpyehkgubhnh.supabase.co';
-/* Cle publishable : publique par nature, elle n'ouvre que les 2 RPC du classement. */
-const SUPA_KEY    = 'sb_publishable_MbrOHPxXoldRT5aHzqBnqA_pqrdzVtl';
+/* Le classement passe par une Edge Function : la page ne porte plus aucune cle
+   Supabase et ne peut plus ecrire directement dans la base. */
+const SCORES_EP   = BACKEND + '/chickenreflex-scores';
 
 const tg = window.Telegram?.WebApp;
 
@@ -424,6 +424,7 @@ const I18N = {
     over:'PARTIE TERMINEE', rank:'RANG', hits:'TOUCHES', missCnt:'RATES',
     best:'MEILLEUR', avg:'MOYENNE', pts:'POINTS',
     sending:'Envoi du score...', sendFail:'Score non enregistre',
+    tgOnly:'Classement reserve a Telegram',
     bestToday:'Ton record', players:'joueur(s) classe(s)',
     replay:'Rejouer', backMenu:'Retour au menu',
     lockedLvl:'Ce niveau est reserve aux detenteurs de <b>$FRANC</b>.<br>Connecte ton wallet pour le debloquer !',
@@ -451,6 +452,7 @@ const I18N = {
     over:'GAME OVER', rank:'RANK', hits:'HITS', missCnt:'MISSES',
     best:'BEST', avg:'AVERAGE', pts:'POINTS',
     sending:'Sending score...', sendFail:'Score not saved',
+    tgOnly:'Leaderboard is Telegram-only',
     bestToday:'Your record', players:'ranked player(s)',
     replay:'Replay', backMenu:'Back to menu',
     lockedLvl:'This level is reserved for <b>$FRANC</b> holders.<br>Connect your wallet to unlock!',
@@ -533,23 +535,27 @@ function resolvePlayer(){
 /* =====================================================================
    CLASSEMENT (RPC Supabase)
    ===================================================================== */
-async function rpc(name, body){
-  const res = await fetch(`${SUPA_URL}/rest/v1/rpc/${name}`,{
-    method:'POST',
-    headers:{'Content-Type':'application/json', apikey:SUPA_KEY, Authorization:'Bearer '+SUPA_KEY},
-    body:JSON.stringify(body)
+/* Le client n'envoie plus son identite : le serveur la derive des initData
+   Telegram dont il verifie la signature. Ecrire exige donc d'etre dans
+   Telegram ; lire reste ouvert a tout le monde. */
+const canSubmit = () => !!tg?.initData;
+async function callScores(action, extra){
+  const body = {action, ...extra};
+  if(tg?.initData) body.initData = tg.initData;
+  const res = await fetch(SCORES_EP,{
+    method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)
   });
-  if(!res.ok) throw new Error(await res.text().catch(()=>res.status));
-  return res.json();
+  const d = await res.json().catch(()=>null);
+  if(!res.ok || !d?.ok) throw new Error(d?.error || res.status);
+  return d.result;
 }
-const submitScore = (stats,mode) => rpc('submit_reflex_score',{
-  p_player_id:player.id, p_player_name:player.name, p_score:stats.score,
-  p_hits:stats.hits, p_misses:stats.misses, p_best_ms:stats.bestMs,
-  p_avg_ms:stats.avgMs, p_mode:mode
+const submitScore = (stats,mode) => callScores('submit',{
+  mode, score:stats.score, hits:stats.hits, misses:stats.misses,
+  best_ms:stats.bestMs, avg_ms:stats.avgMs
 });
 /* Le seul appel de lecture du jeu : TOP N + la ligne du joueur, d'un coup.
    Declenche uniquement quand le joueur ouvre le classement general. */
-const fetchBoard = (mode) => rpc('reflex_board',{p_mode:mode, p_limit:10, p_player_id:player.id});
+const fetchBoard = (mode) => callScores('board',{mode, limit:10});
 
 /* ---------- Record local ----------
    On n'ecrit dans Supabase que si la partie bat le record du joueur. Le record
@@ -804,11 +810,6 @@ function startGame(levelIndex){
   const lv=LEVELS[levelIndex];
   if(lv.holderOnly && !isHolder){ showLockModal(); return; }
 
-  if(!player.fromTelegram){
-    const typed=document.getElementById('name').value.trim();
-    if(typed){ localStorage.setItem('flcr_name', typed.slice(0,24)); player=resolvePlayer(); }
-  }
-
   Object.assign(G,{state:'running', level:levelIndex, score:0, hits:0, misses:0,
                    times:[], current:null, penalised:false});
   el.score.textContent='0';
@@ -865,7 +866,7 @@ async function finish(){
         <div><span>${t('rank')}</span><b class="gold" id="rankVal">${
           record ? '…' : (known?.rank ? '#'+known.rank : '—')}</b></div>
       </div>
-      <p id="subState">${record ? t('sending') : t('noRecord')}</p>`,
+      <p id="subState">${!canSubmit() ? t('tgOnly') : (record ? t('sending') : t('noRecord'))}</p>`,
     btn1:t('replay'), btn2:t('backMenu'),
     a1:()=>startGame(G.level),
     a2:()=>{ closeModal(); boardMode=mode; openBoard(); },
@@ -876,6 +877,15 @@ async function finish(){
   if(!record){
     if(known) document.getElementById('subState').innerHTML=
       `${t('yourRecord')} : <b style="color:var(--green-l)">${known.score}</b>`;
+    return;
+  }
+
+  // Hors Telegram : aucune identite signee, donc pas d'entree au classement.
+  // On garde quand meme le record en local pour que le jeu reste coherent.
+  if(!canSubmit()){
+    setLocalBest(mode, stats.score, stats.bestMs, null);
+    document.getElementById('rankVal').textContent='—';
+    document.getElementById('subState').textContent=t('tgOnly');
     return;
   }
 
@@ -1015,8 +1025,9 @@ el.stage.addEventListener('pointerdown', e=>{ e.preventDefault(); onTap(); });
 
 function boot(){
   if(tg){ tg.ready(); tg.expand(); }
-  document.getElementById('nameRow').style.display = player.fromTelegram ? 'none':'flex';
-  document.getElementById('name').value = player.fromTelegram ? '' : player.name;
+  // Le pseudo libre ne servait qu'a s'inscrire au classement depuis un
+  // navigateur ; le classement n'accepte plus que les identites Telegram.
+  document.getElementById('nameRow').style.display = 'none';
   setLang(lang);
   renderWalletStatus(); renderLevelList(); renderLegend();
   // Aucun appel au classement ici : les lignes sous les niveaux viennent du
