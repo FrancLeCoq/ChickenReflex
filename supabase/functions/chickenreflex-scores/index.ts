@@ -2,7 +2,7 @@
 //  chickenreflex-scores — Edge Function Supabase
 //  Passe-plat verrouille devant les 3 RPC du classement Chicken Reflex.
 //
-//  POST { initData, action:'submit'|'board'|'home', mode?, limit?,
+//  POST { initData, action:'submit'|'board', mode?, limit?,
 //         score?, hits?, misses?, best_ms?, avg_ms? }
 //
 //  Avant : le jeu appelait /rest/v1/rpc/* directement avec la cle
@@ -124,7 +124,7 @@ Deno.serve(async (req) => {
 
   try {
     const body = await req.json().catch(() => ({}))
-    const action: string = ['submit', 'board', 'home'].includes(body?.action) ? body.action : 'home'
+    const action: string = body?.action === 'submit' ? 'submit' : 'board'
     const initData: string = typeof body?.initData === 'string' ? body.initData : ''
 
     const token = Deno.env.get('BOT_TOKEN') || ''
@@ -191,23 +191,14 @@ Deno.serve(async (req) => {
     }
 
     // ── LECTURE : ouverte, "moi" seulement si signature valide ─
-    if (action === 'board') {
-      const mode = MODES.includes(body?.mode) ? body.mode : 'easy'
-      const limit = intIn(body?.limit, 50) ?? 10
-      const { data, error } = await supabase.rpc('reflex_board', {
-        p_mode: mode, p_limit: Math.max(limit, 1), p_player_id: user?.id ?? null,
-      })
-      if (error) {
-        console.error('reflex_board error:', error.message)
-        return new Response(JSON.stringify({ ok: false, error: 'Could not read board' }), { status: 500, headers })
-      }
-      return new Response(JSON.stringify({ ok: true, authFailed, result: data }), { headers })
-    }
-
-    const { data, error } = await supabase.rpc('reflex_home', { p_player_id: user?.id ?? null })
+    const mode = MODES.includes(body?.mode) ? body.mode : 'easy'
+    const limit = intIn(body?.limit, 50) ?? 10
+    const { data, error } = await supabase.rpc('reflex_board', {
+      p_mode: mode, p_limit: Math.max(limit, 1), p_player_id: user?.id ?? null,
+    })
     if (error) {
-      console.error('reflex_home error:', error.message)
-      return new Response(JSON.stringify({ ok: false, error: 'Could not read home' }), { status: 500, headers })
+      console.error('reflex_board error:', error.message)
+      return new Response(JSON.stringify({ ok: false, error: 'Could not read board' }), { status: 500, headers })
     }
     return new Response(JSON.stringify({ ok: true, authFailed, result: data }), { headers })
 
